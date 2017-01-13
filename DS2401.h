@@ -15,7 +15,7 @@
 * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************************/
 /****************************************************************************************
-* File:     AES-128.h
+* File:     DS2401.h
 * Author:   Gerben den Hartog
 * Compagny: Ideetron B.V.
 * Website:  http://www.ideetron.nl/LoRa
@@ -26,21 +26,19 @@
 * Supported Hardware: ID150119-02 Nexus board with RFM95
 ****************************************************************************************/
 
-#ifndef AES128_H
-#define AES128_H
+#ifndef DS2401_H
+#define DS2401_H
 
 /*
 ********************************************************************************************
-* FUNCTION
+* FUNCTION PORTOTYPES
 ********************************************************************************************
 */
 
-void AES_Encrypt(unsigned char *Data, unsigned char *Key);
-void AES_Add_Round_Key(unsigned char *Round_Key, unsigned char (*State)[4]);
-unsigned char AES_Sub_Byte(unsigned char Byte);
-void AES_Shift_Rows(unsigned char (*State)[4]);
-void AES_Mix_Collums(unsigned char (*State)[4]);
-void AES_Calculate_Round_Key(unsigned char Round, unsigned char *Round_Key);
-void Send_State();
+void DS_Read(unsigned char *DS_Bytes);
+void DS_WR1();
+void DS_WR0();
+unsigned char DS_ReadByte();
+unsigned char DS_CheckCRC(unsigned char *DS_bytes);
 
 #endif

@@ -53,6 +53,7 @@
 #include "LoRaMAC.h"
 #include "Waitloop.h"
 #include "Commands.h"
+#include "DS2401.h"
 
 /*
 *****************************************************************************************
@@ -101,7 +102,13 @@ void loop()
 {
   unsigned char i;
   
-  unsigned char DevAddr[4] = {0xAA, 0xBB, 0xCC, 0xDD};
+  unsigned char DevAddr[4];
+  unsigned char AppKey[16]  = {
+  0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
+  0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
+  };
+  unsigned char AppEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  unsigned char DevEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   unsigned char Datarate_Tx = 0x00; //set to SF12 BW 125 kHz
   unsigned char Datarate_Rx = 0x03; //set to SF9 BW 125 kHz
@@ -121,7 +128,24 @@ void loop()
   unsigned char UART_Nb_Bytes = 0;
   uart_t UART_Status = NO_UART_DATA;
 
-  
+  unsigned char DS_Bytes[8];
+  unsigned char DS_Status = 0x00;
+
+  //Get unique ID from the DS2401 and check the CRC
+  while(DS_Status == 0x00)
+  {
+    DS_Read(DS_Bytes);
+
+    DS_Status = DS_CheckCRC(DS_Bytes);
+
+    WaitLoop(10);
+  }
+
+  //Load First 4 bytes in Device ID
+  DevAddr[0] = DS_Bytes[4];
+  DevAddr[1] = DS_Bytes[3];
+  DevAddr[2] = DS_Bytes[2];
+  DevAddr[3] = DS_Bytes[1];
 
   //Initialize RFM module
   RFM_Init();
@@ -182,6 +206,24 @@ void loop()
       //MAC command type
       if(UART_Data[0] == 'm' && UART_Data[1] == 'a' && UART_Data[2] == 'c')
       {
+        //Check for a join command
+        if(UART_Data[4] = 'j' && UART_Data[5] == 'o' && UART_Data[6] == 'i' && UART_Data[7] == 'n')
+        {
+          
+        }
+        
+        //Check for a data command
+        if(UART_Data[4] = 'd' && UART_Data[5] == 'a' && UART_Data[6] == 't' && UART_Data[7] == 'a')
+        {
+          
+        }
+
+        //Check for reset command
+        if(UART_Data[4] = 'r' && UART_Data[5] == 'e' && UART_Data[6] == 's' && UART_Data[7] == 'e' && UART_Data[8] == 't')
+        {
+          
+        }        
+        
         //Check for a set or get command
         if((UART_Data[4] == 's' || UART_Data[4] == 'g') && UART_Data[5] == 'e' && UART_Data[6] == 't')
         {
@@ -190,6 +232,66 @@ void loop()
           {
             Mac_DevAddr(DevAddr, UART_Data, UART_Nb_Bytes);
           }
+
+          //mac set/get nwkskey
+          if(UART_Data[8] == 'n' && UART_Data[9] == 'w' && UART_Data[10] == 'k' && UART_Data[11] == 's' && UART_Data[12] == 'k' && UART_Data[13] == 'e' && UART_Data[14] == 'y')
+          {
+            Mac_NwkSkey(UART_Data, UART_Nb_Bytes);
+          }
+          
+          //mac set/get appskey
+          if(UART_Data[8] == 'a' && UART_Data[9] == 'p' && UART_Data[10] == 'p' && UART_Data[11] == 's' && UART_Data[12] == 'k' && UART_Data[13] == 'e' && UART_Data[14] == 'y')
+          {
+            Mac_AppSkey(UART_Data, UART_Nb_Bytes);
+          }
+
+          //mac set/get appkey
+          if(UART_Data[8] == 'a' && UART_Data[9] == 'p' && UART_Data[10] == 'p' && UART_Data[11] == 'k' && UART_Data[12] == 'e' && UART_Data[13] == 'y')
+          {
+            Mac_Appkey(AppKey, UART_Data, UART_Nb_Bytes);
+          }
+
+          //mac set/get appeui
+          if(UART_Data[8] == 'a' && UART_Data[9] == 'p' && UART_Data[10] == 'p' && UART_Data[11] == 'e' && UART_Data[12] == 'u' && UART_Data[13] == 'i')
+          {
+            Mac_AppEUI(AppEUI, UART_Data, UART_Nb_Bytes);
+          }
+
+          //mac set/get deveui
+          if(UART_Data[8] == 'd' && UART_Data[9] == 'e' && UART_Data[10] == 'v' && UART_Data[11] == 'e' && UART_Data[12] == 'u' && UART_Data[13] == 'i')
+          {
+            Mac_DevEUI(DevEUI, UART_Data, UART_Nb_Bytes);
+          }
+
+          //mac set/get drtx
+          if(UART_Data[8] == 'd' && UART_Data[9] == 'r' && UART_Data[10] == 't' && UART_Data[11] == 'x')
+          {
+            Mac_DrTx(&Datarate_Tx, UART_Data, UART_Nb_Bytes);
+          }
+          
+          //mac set/get drrx
+          if(UART_Data[8] == 'd' && UART_Data[9] == 'r' && UART_Data[10] == 'r' && UART_Data[11] == 'x')
+          {
+            Mac_DrRx(&Datarate_Rx, UART_Data, UART_Nb_Bytes);
+          }
+
+          //mac set/get chtx
+          if(UART_Data[8] == 'c' && UART_Data[9] == 'h' && UART_Data[10] == 't' && UART_Data[11] == 'x')
+          {
+            Mac_ChTx(&Channel_Tx, UART_Data, UART_Nb_Bytes);
+          }
+          
+          //mac set/get chrx
+          if(UART_Data[8] == 'c' && UART_Data[9] == 'h' && UART_Data[10] == 'r' && UART_Data[11] == 'x')
+          {
+            Mac_ChRx(&Channel_Rx, UART_Data, UART_Nb_Bytes);
+          }
+          
+          //mac set/get pwridx
+          if(UART_Data[8] == 'p' && UART_Data[9] == 'w' && UART_Data[10] == 'r' && UART_Data[11] == 'i' && UART_Data[12] == 'd' && UART_Data[13] == 'x')
+          {
+            Mac_Power(UART_Data, UART_Nb_Bytes);
+          }        
         }
       }
 

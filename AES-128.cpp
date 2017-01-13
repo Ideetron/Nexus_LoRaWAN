@@ -22,11 +22,13 @@
 * E-mail:   info@ideetron.nl
 ****************************************************************************************/
 /****************************************************************************************
-* Created on:         06-01-2017
+* Created on:         13-01-2017
 * Supported Hardware: ID150119-02 Nexus board with RFM95
 ****************************************************************************************/
 
+#include <string.h>
 #include "AES-128.h"
+
 
 unsigned char S_Table[16][16] = {
 	{0x63,0x7C,0x77,0x7B,0xF2,0x6B,0x6F,0xC5,0x30,0x01,0x67,0x2B,0xFE,0xD7,0xAB,0x76},
@@ -47,211 +49,244 @@ unsigned char S_Table[16][16] = {
 	{0x8C,0xA1,0x89,0x0D,0xBF,0xE6,0x42,0x68,0x41,0x99,0x2D,0x0F,0xB0,0x54,0xBB,0x16}
 };
 
+
+
+
+/*
+*****************************************************************************************
+* Title         : AES_Encrypt
+* Description	: 
+*****************************************************************************************
+*/
 void AES_Encrypt(unsigned char *Data, unsigned char *Key)
 {
-	unsigned char i;
-	unsigned char Row,Collum;
-	unsigned char Round = 0x00;
+	unsigned char Row, Column, Round = 0;
 	unsigned char Round_Key[16];
     unsigned char State[4][4];
 
-	//Copy input to State arry
-	for(Collum = 0; Collum < 4; Collum++)
+	//  Copy input to State arry
+	for( Column = 0; Column < 4; Column++ )
 	{
-		for(Row = 0; Row < 4; Row++)
+		for( Row = 0; Row < 4; Row++ )
 		{
-			State[Row][Collum] = Data[Row + (4*Collum)];
+			State[Row][Column] = Data[Row + (Column << 2)];
 		}
 	}
 
-	//Copy key to round key
-	for(i = 0; i < 16; i++)
-	{
-		Round_Key[i] = Key[i];
-	}
+	//  Copy key to round key
+    memcpy( &Round_Key[0], &Key[0], 16 );
 
-	//Add round key
-	AES_Add_Round_Key(Round_Key, State);
+	//  Add round key
+	AES_Add_Round_Key( Round_Key, State );
 
-	//Preform 9 full rounds
-	for(Round = 1; Round < 10; Round++)
+	//  Preform 9 full rounds with mixed collums
+	for( Round = 1 ; Round < 10 ; Round++ )
 	{
-		//Preform Byte substitution with S table
-		for(Collum = 0; Collum < 4; Collum++)
+		//  Perform Byte substitution with S table
+		for( Column = 0 ; Column < 4 ; Column++ )
 		{
-			for(Row = 0; Row < 4; Row++)
+			for( Row = 0 ; Row < 4 ; Row++ )
 			{
-				State[Row][Collum] = AES_Sub_Byte(State[Row][Collum]);
+				State[Row][Column] = AES_Sub_Byte( State[Row][Column] );
 			}
 		}
 
-		//Preform Row Shift
+		//  Perform Row Shift
 		AES_Shift_Rows(State);
 
-		//Mix Collums
+		//  Mix Collums
 		AES_Mix_Collums(State);
 
-		//Calculate new round key
-		AES_Calculate_Round_Key(Round,Round_Key);
+		//  Calculate new round key
+		AES_Calculate_Round_Key(Round, Round_Key);
 
+        //  Add the round key to the Round_key
 		AES_Add_Round_Key(Round_Key, State);
 	}
 
-	//Last round whitout mix collums
-
-	//Preform Byte substitution with S table
-	for(Collum = 0; Collum < 4; Collum++)
+	//  Perform Byte substitution with S table whitout mix collums
+	for( Column = 0 ; Column < 4 ; Column++ )
 	{
-		for(Row = 0; Row < 4; Row++)
+		for( Row = 0; Row < 4; Row++ )
 		{
-			State[Row][Collum] = AES_Sub_Byte(State[Row][Collum]);
+			State[Row][Column] = AES_Sub_Byte(State[Row][Column]);
 		}
 	}
-	//Shift rows
+    
+	//  Shift rows
 	AES_Shift_Rows(State);
 
-	//Calculate new round key
-	AES_Calculate_Round_Key(Round,Round_Key);
+	//  Calculate new round key
+	AES_Calculate_Round_Key( Round, Round_Key );
 
-	AES_Add_Round_Key(Round_Key, State);
+    //  Add round key
+	AES_Add_Round_Key( Round_Key, State );
 
-	//Copy the State into the data array
-	for(Collum = 0; Collum < 4; Collum++)
+	//  Copy the State into the data array
+	for( Column = 0; Column < 4; Column++ )
 	{
-		for(Row = 0; Row < 4; Row++)
+		for( Row = 0; Row < 4; Row++ )
 		{
-			Data[Row + (4*Collum)] = State[Row][Collum];
+			Data[Row + (Column << 2)] = State[Row][Column];
 		}
 	}
+} // AES_Encrypt
 
-}
 
+/*
+*****************************************************************************************
+* Title         : AES_Add_Round_Key
+* Description	: 
+*****************************************************************************************
+*/
 void AES_Add_Round_Key(unsigned char *Round_Key, unsigned char (*State)[4])
 {
-	unsigned char Row,Collum;
+	unsigned char Row, Collum;
 
 	for(Collum = 0; Collum < 4; Collum++)
 	{
 		for(Row = 0; Row < 4; Row++)
 		{
-			State[Row][Collum] = State[Row][Collum] ^ Round_Key[Row + (4*Collum)];
+			State[Row][Collum] ^= Round_Key[Row + (Collum << 2)];
 		}
 	}
-}
+} // AES_Add_Round_Key
 
+
+/*
+*****************************************************************************************
+* Title         : AES_Sub_Byte
+* Description	: 
+*****************************************************************************************
+*/
 unsigned char AES_Sub_Byte(unsigned char Byte)
 {
-	unsigned char S_Row,S_Collum;
-	unsigned char S_Byte;
+//	unsigned char S_Row,S_Collum;
+//	unsigned char S_Byte;
+//
+//	S_Row    = ((Byte >> 4) & 0x0F);
+//	S_Collum = ((Byte >> 0) & 0x0F);
+//	S_Byte   = S_Table [S_Row][S_Collum];
 
-	S_Row = ((Byte >> 4) & 0x0F);
-	S_Collum = (Byte & 0x0F);
+	return S_Table [ ((Byte >> 4) & 0x0F) ] [ ((Byte >> 0) & 0x0F) ];
+} //    AES_Sub_Byte
 
-	S_Byte = S_Table[S_Row][S_Collum];
 
-	return S_Byte;
-}
-
+/*
+*****************************************************************************************
+* Title         : AES_Shift_Rows
+* Description	: 
+*****************************************************************************************
+*/
 void AES_Shift_Rows(unsigned char (*State)[4])
 {
 	unsigned char Buffer;
 
 	//Store firt byte in buffer
-	Buffer = State[1][0];
+	Buffer      = State[1][0];
 	//Shift all bytes
 	State[1][0] = State[1][1];
 	State[1][1] = State[1][2];
 	State[1][2] = State[1][3];
 	State[1][3] = Buffer;
 
-	Buffer = State[2][0];
+	Buffer      = State[2][0];
 	State[2][0] = State[2][2];
 	State[2][2] = Buffer;
-	Buffer = State[2][1];
+	Buffer      = State[2][1];
 	State[2][1] = State[2][3];
 	State[2][3] = Buffer;
 
-	Buffer = State[3][3];
+	Buffer      = State[3][3];
 	State[3][3] = State[3][2];
 	State[3][2] = State[3][1];
 	State[3][1] = State[3][0];
 	State[3][0] = Buffer;
-}
+}   //  AES_Shift_Rows
 
+
+/*
+*****************************************************************************************
+* Title         : AES_Mix_Collums
+* Description	: 
+*****************************************************************************************
+*/
 void AES_Mix_Collums(unsigned char (*State)[4])
 {
 	unsigned char Row,Collum;
 	unsigned char a[4], b[4];
+    
+    
 	for(Collum = 0; Collum < 4; Collum++)
 	{
 		for(Row = 0; Row < 4; Row++)
 		{
-			a[Row] = State[Row][Collum];
+			a[Row] =  State[Row][Collum];
 			b[Row] = (State[Row][Collum] << 1);
 
 			if((State[Row][Collum] & 0x80) == 0x80)
 			{
-				b[Row] = b[Row] ^ 0x1B;
+				b[Row] ^= 0x1B;
 			}
 		}
+        
 		State[0][Collum] = b[0] ^ a[1] ^ b[1] ^ a[2] ^ a[3];
 		State[1][Collum] = a[0] ^ b[1] ^ a[2] ^ b[2] ^ a[3];
 		State[2][Collum] = a[0] ^ a[1] ^ b[2] ^ a[3] ^ b[3];
 		State[3][Collum] = a[0] ^ b[0] ^ a[1] ^ a[2] ^ b[3];
 	}
-}
+}   //  AES_Mix_Collums
 
+
+
+/*
+*****************************************************************************************
+* Title         : AES_Calculate_Round_Key
+* Description	: 
+*****************************************************************************************
+*/
 void AES_Calculate_Round_Key(unsigned char Round, unsigned char *Round_Key)
 {
-	unsigned char i,j;
-	unsigned char b;
+	unsigned char i, j, b, Rcon;
 	unsigned char Temp[4];
-	unsigned char Buffer;
-	unsigned char Rcon;
 
-	//Calculate first Temp
-	//Copy laste byte from previous key
-	for(i = 0; i < 4; i++)
-	{
-		Temp[i] = Round_Key[i+12];
-	}
-
-	//Rotate Temp
-	Buffer = Temp[0];
-	Temp[0] = Temp[1];
-	Temp[1] = Temp[2];
-	Temp[2] = Temp[3];
-	Temp[3] = Buffer;
-
-	//Substitute Temp
-	for(i = 0; i < 4; i++)
-	{
-		Temp[i] = AES_Sub_Byte(Temp[i]);
-	}
-
-	//Calculate Rcon
+    
+    //Calculate Rcon
 	Rcon = 0x01;
 	while(Round != 1)
 	{
 		b = Rcon & 0x80;
 		Rcon = Rcon << 1;
+        
 		if(b == 0x80)
 		{
-			Rcon = Rcon ^ 0x1b;
+			Rcon ^= 0x1b;
 		}
 		Round--;
 	}
+    
+	//  Calculate first Temp
+	//  Copy laste byte from previous key and subsitute the byte, but shift the array contents around by 1.
+    Temp[0] = AES_Sub_Byte( Round_Key[12 + 1] );
+    Temp[1] = AES_Sub_Byte( Round_Key[12 + 2] );
+    Temp[2] = AES_Sub_Byte( Round_Key[12 + 3] );
+    Temp[3] = AES_Sub_Byte( Round_Key[12 + 0] );
 
-	//XOR Rcon
-	Temp[0] = Temp[0] ^ Rcon;
+	//  XOR with Rcon
+	Temp[0] ^= Rcon;
 
-	//Calculate new key
+	//  Calculate new key
 	for(i = 0; i < 4; i++)
 	{
 		for(j = 0; j < 4; j++)
 		{
-			Round_Key[j + (4*i)] = Round_Key[j + (4*i)] ^ Temp[j];
-			Temp[j] = Round_Key[j + (4*i)];
+			Round_Key[j + (i << 2)]  ^= Temp[j];
+			Temp[j]                   = Round_Key[j + (i << 2)];
 		}
 	}
-}
+}   //  AES_Calculate_Round_Key
+
+
+
+
+ 

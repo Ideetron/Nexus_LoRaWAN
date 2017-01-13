@@ -38,6 +38,16 @@
 void UART_Send_Newline();
 void UART_Send_Data(unsigned char *Data, unsigned char Length);
 void Mac_DevAddr(unsigned char *DevAddr, unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_NwkSkey(unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_AppSkey(unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_Appkey(unsigned char *AppKey, unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_AppEUI(unsigned char *AppEUI, unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_DevEUI(unsigned char *DevEUI, unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_DrTx(unsigned char *Datarate, unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_DrRx(unsigned char *Datarate, unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_ChTx(unsigned char *Channel, unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_ChRx(unsigned char *Channel, unsigned char *Data, unsigned char Nb_Bytes);
+void Mac_Power(unsigned char *Data, unsigned char Nb_Bytes);
 
 
 
