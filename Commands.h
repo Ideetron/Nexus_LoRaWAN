@@ -48,7 +48,6 @@ void Mac_DrRx(unsigned char *Datarate, unsigned char *Data, unsigned char Nb_Byt
 void Mac_ChTx(unsigned char *Channel, unsigned char *Data, unsigned char Nb_Bytes);
 void Mac_ChRx(unsigned char *Channel, unsigned char *Data, unsigned char Nb_Bytes);
 void Mac_Power(unsigned char *Data, unsigned char Nb_Bytes);
-
-
+void Mac_Data(unsigned char *Data, unsigned char Nb_Bytes, unsigned char *RFM_Data, unsigned char *RFM_Length);
 
 #endif

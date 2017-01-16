@@ -35,7 +35,7 @@
 #include <SPI.h>
 #include "Commands.h"
 #include "Conversions.h"
-#include "RMF95.h"
+#include "RFM95.h"
 
 /*
 *****************************************************************************************
@@ -340,6 +340,61 @@ void Mac_ChRx(unsigned char *Channel, unsigned char *Data, unsigned char Nb_Byte
 
 void Mac_Power(unsigned char *Data, unsigned char Nb_Bytes)
 {
+  unsigned char Power;
   
+  //Check if it is a set command and there is enough data sent
+  if(Data[4] == 's' && Nb_Bytes == 17)
+  {
+    Power = ASCII2Hex(Data[15],Data[16]);
+   
+    //Check if power is not over 0x0F
+    if(Power > 0x0F)
+    {
+      Power = 0x0F;
+    }
+
+    //Set all ther correct bits for the RFM register
+    Power = Power + 0xF0;
+
+    //Write power to RFM module
+    RFM_Write(0x09,Power);    
+  }
+
+  //Get Power register from RFM module
+  Power = RFM_Read(0x09);
+
+  //Remove upper bits
+  Power = Power & 0x0F;
+
+  //Send answer
+  Serial.write("Power: ");
+  UART_Send_Data(&Power,0x01);
+  UART_Send_Newline();  
+}
+
+void Mac_Data(unsigned char *Data, unsigned char Nb_Bytes, unsigned char *RFM_Data, unsigned char *RFM_Length)
+{
+  unsigned char i;
+  
+  //Remove the "mac data " bytes
+  Nb_Bytes = Nb_Bytes - 9;
+
+  //Check for an even number of received data bytes other wise fill whit 0x00
+  if(Nb_Bytes % 2)
+  {
+    Data[Nb_Bytes + 9] = 0x00;
+    Nb_Bytes++;
+  }
+
+  *RFM_Length = Nb_Bytes / 2;
+
+  for(i = 0x00; i < *RFM_Length; i++)
+  {
+    RFM_Data[i] = ASCII2Hex(Data[(i*2)+9],Data[(i*2)+10]);
+  }
+
+  Serial.write("Data ");
+  UART_Send_Data(RFM_Data,*RFM_Length);
+  UART_Send_Newline();  
 }
 

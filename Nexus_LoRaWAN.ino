@@ -118,13 +118,13 @@ void loop()
   unsigned char Sleep_Sec = 0x00;
   unsigned char Sleep_Time = 0x01;
 
-  unsigned char Data_Tx[256];
+  unsigned char Data_Tx[64];
   unsigned char Data_Rx[64];
   unsigned char Data_Length_Tx;
   unsigned char Data_Length_Rx = 0x00;
 
   unsigned int UART_Timer = 0;
-  unsigned char UART_Data[64];
+  unsigned char UART_Data[111];
   unsigned char UART_Nb_Bytes = 0;
   uart_t UART_Status = NO_UART_DATA;
 
@@ -153,7 +153,7 @@ void loop()
   while(1)
   {
     //Raise timers on the hearthbeat of 1 ms
-    //Check for compare flag of tiemr 2
+    //Check for compare flag of timer 2
     if((TIFR2 & 0x02) == 0x02)
     {
       //Raise UART timer if ther is a new message
@@ -171,7 +171,7 @@ void loop()
     //Check for Serail data
     if(Serial.available() != 0)
     {
-      if(UART_Nb_Bytes < 64)
+      if(UART_Nb_Bytes < 111)
       {
         //Get data
         UART_Data[UART_Nb_Bytes] = Serial.read();
@@ -200,7 +200,7 @@ void loop()
     }
 
     //Check if ther is data and timer has run out
-    if(UART_Status == NEW_UART_DATA && UART_Timer >= 200)
+    if(UART_Status == NEW_UART_DATA && UART_Timer >= 250)
     {
       //Check for commands
       //MAC command type
@@ -215,6 +215,7 @@ void loop()
         //Check for a data command
         if(UART_Data[4] = 'd' && UART_Data[5] == 'a' && UART_Data[6] == 't' && UART_Data[7] == 'a')
         {
+          Mac_Data(UART_Data, UART_Nb_Bytes, Data_Tx, &Data_Length_Tx);
           
         }
 
