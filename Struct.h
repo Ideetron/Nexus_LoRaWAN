@@ -15,41 +15,71 @@
 * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************************/
 /****************************************************************************************
-* File:     Commands.h
+* File:     Struct.h
 * Author:   Gerben den Hartog
 * Compagny: Ideetron B.V.
 * Website:  http://www.ideetron.nl/LoRa
 * E-mail:   info@ideetron.nl
 ****************************************************************************************/
 /****************************************************************************************
-* Created on:         13-01-2017
+* Created on:         06-02-2017
 * Supported Hardware: ID150119-02 Nexus board with RFM95
 ****************************************************************************************/
 
-#ifndef COMMANDS_H
-#define COMMANDS_H
 
-#include "Struct.h"
+#ifndef STRUCT_H
+#define STRUCT_H
 
 /*
-*****************************************************************************************
-* FUNCTION PROTOTYPES
-*****************************************************************************************
+********************************************************************************************
+* STRUCT DEFENITIONS
+********************************************************************************************
 */
 
-void UART_Send_Newline();
-void UART_Send_Data(unsigned char *Data, unsigned char Length);
-void Mac_DevAddr(sBuffer *UART_Buffer, unsigned char *DevAddr);
-void Mac_NwkSkey(sBuffer *UART_Buffer);
-void Mac_AppSkey(sBuffer *UART_Buffer);
-void Mac_Appkey(sBuffer *UART_Buffer, unsigned char *AppKey);
-void Mac_AppEUI(sBuffer *UART_Buffer, unsigned char *AppEUI);
-void Mac_DevEUI(sBuffer *UART_Buffer, unsigned char *DevEUI);
-void Mac_DrTx(sBuffer *UART_Buffer, unsigned char *Datarate);
-void Mac_DrRx(sBuffer *UART_Buffer, unsigned char *Datarate);
-void Mac_ChTx(sBuffer *UART_Buffer, unsigned char *Channel);
-void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *Channel);
-void Mac_Power(sBuffer *UART_Buffer);
-void Mac_Data(sBuffer *UART_Buffer, unsigned char *RFM_Data, unsigned char *RFM_Length);
+typedef struct {
+    unsigned char *Data;
+    unsigned char Counter;
+} sBuffer;
+
+typedef struct {
+    unsigned char *NwkSKey;
+    unsigned char *AppSKey;
+    unsigned char *DevAddr;
+    unsigned int  *Frame_Counter;
+} sLoRa_Session;
+
+typedef struct {
+    unsigned char *DevEUI;
+    unsigned char *AppEUI;
+    unsigned char *AppKey;
+    unsigned char *DevNonce;
+    unsigned char *AppNonce;
+    unsigned char *NetID;
+} sLoRa_OTAA;
+
+typedef struct{
+    unsigned char MAC_Header;
+    unsigned char DevAddr[4];
+    unsigned char Frame_Control;
+    unsigned int  Frame_Counter;
+    unsigned char Frame_Port;
+    unsigned char Frame_Options[15];
+    unsigned char MIC[4];
+    unsigned char Direction;
+} sLoRa_Message;
+
+typedef struct {
+    unsigned char Tx_Direction;
+    unsigned char Send_ACK;
+    unsigned char Confirm;
+    unsigned char Tx_Timing;
+    unsigned char Datarate_Up;
+    unsigned char Datarate_Down;
+    unsigned char Channel_Up;
+    unsigned char Channel_Down;
+} sSettings;
+
+
 
 #endif
+

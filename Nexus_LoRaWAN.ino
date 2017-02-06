@@ -54,6 +54,7 @@
 #include "Waitloop.h"
 #include "Commands.h"
 #include "DS2401.h"
+#include "Struct.h"
 
 /*
 *****************************************************************************************
@@ -100,6 +101,8 @@ void setup()
 
 void loop() 
 {
+  uart_t UART_Status = NO_UART_DATA;
+  
   unsigned char i;
   
   unsigned char DevAddr[4];
@@ -125,8 +128,8 @@ void loop()
 
   unsigned int UART_Timer = 0;
   unsigned char UART_Data[111];
-  unsigned char UART_Nb_Bytes = 0;
-  uart_t UART_Status = NO_UART_DATA;
+  sBuffer UART_Rx_Buffer = { UART_Data, 0x00 };
+  
 
   unsigned char DS_Bytes[8];
   unsigned char DS_Status = 0x00;
@@ -171,16 +174,16 @@ void loop()
     //Check for Serail data
     if(Serial.available() != 0)
     {
-      if(UART_Nb_Bytes < 111)
+      if(UART_Rx_Buffer.Counter < 111)
       {
         //Get data
-        UART_Data[UART_Nb_Bytes] = Serial.read();
+        UART_Data[UART_Rx_Buffer.Counter] = Serial.read();
 
         //Raise counter
-        UART_Nb_Bytes++;
+        UART_Rx_Buffer.Counter++;
 
         //Check if it is a new message
-        if(UART_Nb_Bytes == 0x01)
+        if(UART_Rx_Buffer.Counter == 0x01)
         {
           //Reset timer
           UART_Timer = 0;
@@ -215,7 +218,7 @@ void loop()
         //Check for a data command
         if(UART_Data[4] = 'd' && UART_Data[5] == 'a' && UART_Data[6] == 't' && UART_Data[7] == 'a')
         {
-          Mac_Data(UART_Data, UART_Nb_Bytes, Data_Tx, &Data_Length_Tx);
+          Mac_Data(&UART_Rx_Buffer, Data_Tx, &Data_Length_Tx);
           
         }
 
@@ -231,67 +234,67 @@ void loop()
           //mac set/get devaddr command
           if(UART_Data[8] == 'd' && UART_Data[9] == 'e' && UART_Data[10] == 'v' && UART_Data[11] == 'a' && UART_Data[12] == 'd' && UART_Data[13] == 'd' && UART_Data[14] == 'r')
           {
-            Mac_DevAddr(DevAddr, UART_Data, UART_Nb_Bytes);
+            Mac_DevAddr(&UART_Rx_Buffer, DevAddr);
           }
 
           //mac set/get nwkskey
           if(UART_Data[8] == 'n' && UART_Data[9] == 'w' && UART_Data[10] == 'k' && UART_Data[11] == 's' && UART_Data[12] == 'k' && UART_Data[13] == 'e' && UART_Data[14] == 'y')
           {
-            Mac_NwkSkey(UART_Data, UART_Nb_Bytes);
+            Mac_NwkSkey(&UART_Rx_Buffer);
           }
           
           //mac set/get appskey
           if(UART_Data[8] == 'a' && UART_Data[9] == 'p' && UART_Data[10] == 'p' && UART_Data[11] == 's' && UART_Data[12] == 'k' && UART_Data[13] == 'e' && UART_Data[14] == 'y')
           {
-            Mac_AppSkey(UART_Data, UART_Nb_Bytes);
+            Mac_AppSkey(&UART_Rx_Buffer);
           }
 
           //mac set/get appkey
           if(UART_Data[8] == 'a' && UART_Data[9] == 'p' && UART_Data[10] == 'p' && UART_Data[11] == 'k' && UART_Data[12] == 'e' && UART_Data[13] == 'y')
           {
-            Mac_Appkey(AppKey, UART_Data, UART_Nb_Bytes);
+            Mac_Appkey(&UART_Rx_Buffer, AppKey);
           }
 
           //mac set/get appeui
           if(UART_Data[8] == 'a' && UART_Data[9] == 'p' && UART_Data[10] == 'p' && UART_Data[11] == 'e' && UART_Data[12] == 'u' && UART_Data[13] == 'i')
           {
-            Mac_AppEUI(AppEUI, UART_Data, UART_Nb_Bytes);
+            Mac_AppEUI(&UART_Rx_Buffer, AppEUI);
           }
 
           //mac set/get deveui
           if(UART_Data[8] == 'd' && UART_Data[9] == 'e' && UART_Data[10] == 'v' && UART_Data[11] == 'e' && UART_Data[12] == 'u' && UART_Data[13] == 'i')
           {
-            Mac_DevEUI(DevEUI, UART_Data, UART_Nb_Bytes);
+            Mac_DevEUI(&UART_Rx_Buffer, DevEUI);
           }
 
           //mac set/get drtx
           if(UART_Data[8] == 'd' && UART_Data[9] == 'r' && UART_Data[10] == 't' && UART_Data[11] == 'x')
           {
-            Mac_DrTx(&Datarate_Tx, UART_Data, UART_Nb_Bytes);
+            Mac_DrTx(&UART_Rx_Buffer, &Datarate_Tx);
           }
           
           //mac set/get drrx
           if(UART_Data[8] == 'd' && UART_Data[9] == 'r' && UART_Data[10] == 'r' && UART_Data[11] == 'x')
           {
-            Mac_DrRx(&Datarate_Rx, UART_Data, UART_Nb_Bytes);
+            Mac_DrRx(&UART_Rx_Buffer, &Datarate_Rx);
           }
 
           //mac set/get chtx
           if(UART_Data[8] == 'c' && UART_Data[9] == 'h' && UART_Data[10] == 't' && UART_Data[11] == 'x')
           {
-            Mac_ChTx(&Channel_Tx, UART_Data, UART_Nb_Bytes);
+            Mac_ChTx(&UART_Rx_Buffer, &Channel_Tx);
           }
           
           //mac set/get chrx
           if(UART_Data[8] == 'c' && UART_Data[9] == 'h' && UART_Data[10] == 'r' && UART_Data[11] == 'x')
           {
-            Mac_ChRx(&Channel_Rx, UART_Data, UART_Nb_Bytes);
+            Mac_ChRx(&UART_Rx_Buffer, &Channel_Rx);
           }
           
           //mac set/get pwridx
           if(UART_Data[8] == 'p' && UART_Data[9] == 'w' && UART_Data[10] == 'r' && UART_Data[11] == 'i' && UART_Data[12] == 'd' && UART_Data[13] == 'x')
           {
-            Mac_Power(UART_Data, UART_Nb_Bytes);
+            Mac_Power(&UART_Rx_Buffer);
           }        
         }
       }
@@ -310,7 +313,7 @@ void loop()
       UART_Status = NO_UART_DATA;
 
       //Reset number of bytes
-      UART_Nb_Bytes = 0;
+      UART_Rx_Buffer.Counter = 0;
 
       //Clear UART
       while(Serial.available() != 0)
