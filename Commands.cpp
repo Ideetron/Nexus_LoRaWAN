@@ -373,7 +373,7 @@ void Mac_Power(sBuffer *UART_Buffer)
   UART_Send_Newline();
 }
 
-void Mac_Data(sBuffer *UART_Buffer, unsigned char *RFM_Data, unsigned char *RFM_Length)
+void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer)
 {
   unsigned char i;
 
@@ -387,15 +387,15 @@ void Mac_Data(sBuffer *UART_Buffer, unsigned char *RFM_Data, unsigned char *RFM_
     UART_Buffer->Counter++;
   }
 
-  *RFM_Length = UART_Buffer->Counter / 2;
+  RFM_Buffer->Counter = UART_Buffer->Counter / 2;
 
-  for(i = 0x00; i < *RFM_Length; i++)
+  for(i = 0x00; i < RFM_Buffer->Counter; i++)
   {
-    RFM_Data[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+9],UART_Buffer->Data[(i*2)+10]);
+    RFM_Buffer->Data[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+9],UART_Buffer->Data[(i*2)+10]);
   }
 
   Serial.write("Data ");
-  UART_Send_Data(RFM_Data,*RFM_Length);
+  UART_Send_Data(RFM_Buffer->Data,RFM_Buffer->Counter);
   UART_Send_Newline();
 }
 

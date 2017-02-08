@@ -50,6 +50,6 @@ void Mac_DrRx(sBuffer *UART_Buffer, unsigned char *Datarate);
 void Mac_ChTx(sBuffer *UART_Buffer, unsigned char *Channel);
 void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *Channel);
 void Mac_Power(sBuffer *UART_Buffer);
-void Mac_Data(sBuffer *UART_Buffer, unsigned char *RFM_Data, unsigned char *RFM_Length);
+void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer);
 
 #endif

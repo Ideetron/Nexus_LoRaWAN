@@ -122,10 +122,11 @@ void loop()
   unsigned char Sleep_Time = 0x01;
 
   unsigned char Data_Tx[64];
+  sBuffer Buffer_Tx = {Data_Tx, 0x00};
+  
   unsigned char Data_Rx[64];
-  unsigned char Data_Length_Tx;
-  unsigned char Data_Length_Rx = 0x00;
-
+  sBuffer Buffer_Rx = {Data_Rx, 0x00};
+  
   unsigned int UART_Timer = 0;
   unsigned char UART_Data[111];
   sBuffer UART_Rx_Buffer = { UART_Data, 0x00 };
@@ -210,20 +211,20 @@ void loop()
       if(UART_Data[0] == 'm' && UART_Data[1] == 'a' && UART_Data[2] == 'c')
       {
         //Check for a join command
-        if(UART_Data[4] = 'j' && UART_Data[5] == 'o' && UART_Data[6] == 'i' && UART_Data[7] == 'n')
+        if(UART_Data[4] == 'j' && UART_Data[5] == 'o' && UART_Data[6] == 'i' && UART_Data[7] == 'n')
         {
           
         }
         
         //Check for a data command
-        if(UART_Data[4] = 'd' && UART_Data[5] == 'a' && UART_Data[6] == 't' && UART_Data[7] == 'a')
+        if(UART_Data[4] == 'd' && UART_Data[5] == 'a' && UART_Data[6] == 't' && UART_Data[7] == 'a')
         {
-          Mac_Data(&UART_Rx_Buffer, Data_Tx, &Data_Length_Tx);
+          Mac_Data(&UART_Rx_Buffer, &Buffer_Tx);
           
         }
 
         //Check for reset command
-        if(UART_Data[4] = 'r' && UART_Data[5] == 'e' && UART_Data[6] == 's' && UART_Data[7] == 'e' && UART_Data[8] == 't')
+        if(UART_Data[4] == 'r' && UART_Data[5] == 'e' && UART_Data[6] == 's' && UART_Data[7] == 'e' && UART_Data[8] == 't')
         {
           
         }        
