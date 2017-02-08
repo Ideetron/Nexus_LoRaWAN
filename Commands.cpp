@@ -339,37 +339,32 @@ void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *Channel)
   UART_Send_Channel(Channel);
 }
 
-void Mac_Power(sBuffer *UART_Buffer)
+void Mac_Power(sBuffer *UART_Buffer, unsigned char *Power)
 {
-  unsigned char Power;
 
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 17)
   {
-    Power = ASCII2Hex(UART_Buffer->Data[15],UART_Buffer->Data[16]);
+    unsigned char RFM_Data;
+    
+    *Power = ASCII2Hex(UART_Buffer->Data[15],UART_Buffer->Data[16]);
 
     //Check if power is not over 0x0F
-    if(Power > 0x0F)
+    if(*Power > 0x0F)
     {
-      Power = 0x0F;
+      *Power = 0x0F;
     }
 
     //Set all ther correct bits for the RFM register
-    Power = Power + 0xF0;
+    RFM_Data = *Power + 0xF0;
 
     //Write power to RFM module
-    RFM_Write(0x09,Power);
+    RFM_Write(0x09,RFM_Data);
   }
-
-  //Get Power register from RFM module
-  Power = RFM_Read(0x09);
-
-  //Remove upper bits
-  Power = Power & 0x0F;
 
   //Send answer
   Serial.write("Power: ");
-  UART_Send_Data(&Power,0x01);
+  UART_Send_Data(Power,0x01);
   UART_Send_Newline();
 }
 
@@ -397,5 +392,10 @@ void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer)
   Serial.write("Data ");
   UART_Send_Data(RFM_Buffer->Data,RFM_Buffer->Counter);
   UART_Send_Newline();
+}
+
+void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm)
+{
+  
 }
 

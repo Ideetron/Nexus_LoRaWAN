@@ -69,14 +69,14 @@ typedef struct{
 } sLoRa_Message;
 
 typedef struct {
-    unsigned char Tx_Direction;
-    unsigned char Send_ACK;
     unsigned char Confirm;
-    unsigned char Tx_Timing;
-    unsigned char Datarate_Up;
-    unsigned char Datarate_Down;
-    unsigned char Channel_Up;
-    unsigned char Channel_Down;
+    unsigned char Mote_Type;
+    unsigned char Datarate_Tx;
+    unsigned char Datarate_Rx;
+    unsigned char Channel_Tx;
+    unsigned char Channel_Rx;
+    unsigned char Channel_Hopping;
+    unsigned char Transmit_Power;
 } sSettings;
 
 

@@ -118,6 +118,18 @@ void loop()
   unsigned char Channel_Tx = 0x00; //set to 868.100 MHz
   unsigned char Channel_Rx = 0x10; //set tot 869.525 MHz
 
+  sSettings LoRa_Settings;
+
+  LoRa_Settings.Mote_Type = 0x00; //0x00 is type A, 0x01 is type C
+    
+  LoRa_Settings.Datarate_Rx = 0x03;
+  LoRa_Settings.Channel_Rx = 0x10;
+  LoRa_Settings.Datarate_Tx = 0x00;
+  LoRa_Settings.Channel_Tx = 0x00;
+    
+  LoRa_Settings.Confirm = 0x00; //0x00 unconfirmed, 0x01 confirmed
+  LoRa_Settings.Channel_Hopping = 0x00; //0x00 no channel hopping, 0x01 channel hopping
+
   unsigned char Sleep_Sec = 0x00;
   unsigned char Sleep_Time = 0x01;
 
@@ -131,7 +143,6 @@ void loop()
   unsigned char UART_Data[111];
   sBuffer UART_Rx_Buffer = { UART_Data, 0x00 };
   
-
   unsigned char DS_Bytes[8];
   unsigned char DS_Status = 0x00;
 
@@ -271,32 +282,39 @@ void loop()
           //mac set/get drtx
           if(UART_Data[8] == 'd' && UART_Data[9] == 'r' && UART_Data[10] == 't' && UART_Data[11] == 'x')
           {
-            Mac_DrTx(&UART_Rx_Buffer, &Datarate_Tx);
+            Mac_DrTx(&UART_Rx_Buffer, &LoRa_Settings.Datarate_Tx);
           }
           
           //mac set/get drrx
           if(UART_Data[8] == 'd' && UART_Data[9] == 'r' && UART_Data[10] == 'r' && UART_Data[11] == 'x')
           {
-            Mac_DrRx(&UART_Rx_Buffer, &Datarate_Rx);
+            Mac_DrRx(&UART_Rx_Buffer, &LoRa_Settings.Datarate_Rx);
           }
 
           //mac set/get chtx
           if(UART_Data[8] == 'c' && UART_Data[9] == 'h' && UART_Data[10] == 't' && UART_Data[11] == 'x')
           {
-            Mac_ChTx(&UART_Rx_Buffer, &Channel_Tx);
+            Mac_ChTx(&UART_Rx_Buffer, &LoRa_Settings.Channel_Tx);
           }
           
           //mac set/get chrx
           if(UART_Data[8] == 'c' && UART_Data[9] == 'h' && UART_Data[10] == 'r' && UART_Data[11] == 'x')
           {
-            Mac_ChRx(&UART_Rx_Buffer, &Channel_Rx);
+            Mac_ChRx(&UART_Rx_Buffer, &LoRa_Settings.Channel_Rx);
           }
           
           //mac set/get pwridx
           if(UART_Data[8] == 'p' && UART_Data[9] == 'w' && UART_Data[10] == 'r' && UART_Data[11] == 'i' && UART_Data[12] == 'd' && UART_Data[13] == 'x')
           {
-            Mac_Power(&UART_Rx_Buffer);
-          }        
+            Mac_Power(&UART_Rx_Buffer, &LoRa_Settings.Transmit_Power);
+          }
+
+          //mac set/get cnf
+          if(UART_Data[8] == 'c' && UART_Data[9] == 'n' && UART_Data[10] == 'f')
+          {
+            Mac_Confirm(&UART_Rx_Buffer, &LoRa_Settings.Confirm);
+          }
+          
         }
       }
 

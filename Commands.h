@@ -51,5 +51,6 @@ void Mac_ChTx(sBuffer *UART_Buffer, unsigned char *Channel);
 void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *Channel);
 void Mac_Power(sBuffer *UART_Buffer);
 void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer);
+void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm);
 
 #endif
