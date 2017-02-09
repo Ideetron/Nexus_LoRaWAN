@@ -70,7 +70,7 @@ typedef struct{
 
 typedef struct {
     unsigned char Confirm;
-    unsigned char Mote_Type;
+    unsigned char Mote_Class;
     unsigned char Datarate_Tx;
     unsigned char Datarate_Rx;
     unsigned char Channel_Tx;

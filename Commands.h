@@ -49,8 +49,11 @@ void Mac_DrTx(sBuffer *UART_Buffer, unsigned char *Datarate);
 void Mac_DrRx(sBuffer *UART_Buffer, unsigned char *Datarate);
 void Mac_ChTx(sBuffer *UART_Buffer, unsigned char *Channel);
 void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *Channel);
-void Mac_Power(sBuffer *UART_Buffer);
-void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer);
+void Mac_Power(sBuffer *UART_Buffer, unsigned char *Power);
 void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm);
+void Mac_Channel_Hopping(sBuffer *UART_Buffer, unsigned char *Channel_Hopping);
+void Mac_Class(sBuffer *UART_Buffer, unsigned char *Class);
+void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer);
 
 #endif
+

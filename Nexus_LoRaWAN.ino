@@ -120,7 +120,7 @@ void loop()
 
   sSettings LoRa_Settings;
 
-  LoRa_Settings.Mote_Type = 0x00; //0x00 is type A, 0x01 is type C
+  LoRa_Settings.Mote_Class = 0x00; //0x00 is type A, 0x01 is type C
     
   LoRa_Settings.Datarate_Rx = 0x03;
   LoRa_Settings.Channel_Rx = 0x10;
@@ -313,6 +313,18 @@ void loop()
           if(UART_Data[8] == 'c' && UART_Data[9] == 'n' && UART_Data[10] == 'f')
           {
             Mac_Confirm(&UART_Rx_Buffer, &LoRa_Settings.Confirm);
+          }
+
+          //mac set/get chhop
+          if(UART_Data[8] == 'c' && UART_Data[9] == 'h' && UART_Data[10] == 'h' && UART_Data[11] == 'o' && UART_Data[12] == 'p')
+          {
+            Mac_Channel_Hopping(&UART_Rx_Buffer, &LoRa_Settings.Channel_Hopping);
+          }
+
+          //mac set/get class
+          if(UART_Data[8] == 'c' && UART_Data[9] == 'l' && UART_Data[10] == 'a' && UART_Data[11] == 's' && UART_Data[12] == 's')
+          {
+            Mac_Class(&UART_Rx_Buffer, &LoRa_Settings.Mote_Class);
           }
           
         }

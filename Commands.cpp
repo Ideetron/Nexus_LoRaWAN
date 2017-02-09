@@ -368,6 +368,70 @@ void Mac_Power(sBuffer *UART_Buffer, unsigned char *Power)
   UART_Send_Newline();
 }
 
+void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm)
+{
+  //Check if it is a set command and there is enough data sent
+  if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 14)
+  {
+    *Confirm = ASCII2Hex(UART_Buffer->Data[12],UART_Buffer->Data[13]);
+
+    if(*Confirm >= 0x01)
+    {
+      *Confirm = 0x01;
+    }
+  }
+
+  //Send answer
+  Serial.write("Confirm: ");
+  UART_Send_Data(Confirm,0x01);
+  UART_Send_Newline();  
+}
+
+void Mac_Channel_Hopping(sBuffer *UART_Buffer, unsigned char *Channel_Hopping)
+{
+  //Check if it is a set command and there is enough data sent
+  if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 16)
+  {
+    *Channel_Hopping = ASCII2Hex(UART_Buffer->Data[14],UART_Buffer->Data[15]);
+
+    if(*Channel_Hopping >= 0x01)
+    {
+      *Channel_Hopping = 0x01;
+    }
+  }
+
+  //Send answer
+  Serial.write("Channel Hopping: ");
+  UART_Send_Data(Channel_Hopping,0x01);
+  UART_Send_Newline();
+}
+
+void Mac_Class(sBuffer *UART_Buffer, unsigned char *Class)
+{
+  //Check if it is a set command and there is enough data sent
+  if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 16)
+  {
+    *Class = ASCII2Hex(UART_Buffer->Data[14],UART_Buffer->Data[15]);
+
+    if(*Class >= 0x01)
+    {
+      *Class = 0x01;
+    }
+  }
+
+  //Send answer
+  Serial.write("Mote Class: ");
+  if(*Class == 0x00)
+  {
+    Serial.write("A");
+  }
+  else
+  {
+    Serial.write("C");
+  }
+  UART_Send_Newline();
+}
+
 void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer)
 {
   unsigned char i;
@@ -394,8 +458,5 @@ void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer)
   UART_Send_Newline();
 }
 
-void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm)
-{
-  
-}
+
 
