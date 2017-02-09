@@ -35,15 +35,7 @@
 #include "Encrypt.h"
 #include "LoRaMAC.h"
 #include "Waitloop.h"
-
-/*
-*****************************************************************************************
-* INCLUDE GLOBAL VARIABLES
-*****************************************************************************************
-*/
-
-unsigned int Frame_Counter_Up = 0x0000;
-extern unsigned char DevAddr[4];
+#include "Struct.h"
 
 /*
 *****************************************************************************************
@@ -64,27 +56,38 @@ extern unsigned char DevAddr[4];
 * Returns     : Number of bytes received
 *****************************************************************************************
 */
-unsigned char LORA_Cycle(unsigned char *Data_Tx, unsigned char *Data_Rx, unsigned char Data_Length_Tx, unsigned char Datarate_Tx, unsigned char Datarate_Rx, unsigned char Channel_Tx, unsigned char Channel_Rx, unsigned char *Address)
+
+void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message_Rx, sSettings *LoRa_Settings)
 {
-	unsigned char Data_Length_Rx;
-  	unsigned char i;
+  unsigned char i;
 
 	//Time to wait in ms for receive slot 2
 	unsigned char Receive_Delay_2 = 17;
+  unsigned char Recieve_Delay_JoinAck = 57; //NEED TO CHECK THIS NUMBER
 
-	LORA_Send_Data(Data_Tx, Data_Length_Tx, Frame_Counter_Up, Datarate_Tx, Channel_Tx, Address);
-
-	//Raise frame counter
-	Frame_Counter_Up++;
-
-  for(i = 0; i <= Receive_Delay_2; i ++ )
+  if(RFM_Command == JOIN)
   {
-    WaitLoop(100);
+    //Send join Req
+    LoRa_Send_JoinReq(OTAA_Data);
+    
+    for(i = 0; i <= Receive_Delay_JoinAck; i ++ )
+    {
+      WaitLoop(100);
+    }
   }
 
-	Data_Length_Rx = LORA_Receive_Data(Data_Rx, Datarate_Rx, Channel_Rx, Address);
+  if(RFM_Command == NEW_RFM_COMMAND)
+  {
 
-	return Data_Length_Rx;
+	  LORA_Send_Data(Data_Tx, Session_Data, LoRa_Setting);
+
+    for(i = 0; i <= Receive_Delay_2; i ++ )
+    {
+      WaitLoop(100);
+    }
+  }
+
+	LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx);
 }
 
 /*
@@ -96,7 +99,7 @@ unsigned char LORA_Cycle(unsigned char *Data_Tx, unsigned char *Data_Rx, unsigne
 *               Frame_Counter_Up  Frame counter of upstream frames
 *****************************************************************************************
 */
-void LORA_Send_Data(unsigned char *Data, unsigned char Data_Length, unsigned int Frame_Counter_Up, unsigned char Datarate, unsigned char Channel, unsigned char *Address)
+void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *LoRa_Settings)
 {
 	//Define variables
 	unsigned char i;
@@ -159,6 +162,17 @@ void LORA_Send_Data(unsigned char *Data, unsigned char Data_Length, unsigned int
 
 	//Send Package
 	RFM_Send_Package(RFM_Data, RFM_Package_Length);
+
+  //Raise frame counter
+  if(*Session_Data->Frame_Counter != 0xFFFF)
+  {
+    //Raise frame counter
+    *Session_Data->Frame_Counter = *Session_Data->Frame_Counter + 1;
+  }
+  else
+  {
+    *Session_Data->Frame_Counter = 0x0000;
+  } 
 }
 
 
@@ -171,7 +185,7 @@ void LORA_Send_Data(unsigned char *Data, unsigned char Data_Length, unsigned int
 * Returns     : Number of bytes received
 *****************************************************************************************
 */
-unsigned char LORA_Receive_Data(unsigned char *Data, unsigned char Datarate, unsigned char Channel, unsigned char Address)
+void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message)
 {
 	unsigned char i;
 
@@ -281,4 +295,55 @@ unsigned char LORA_Receive_Data(unsigned char *Data, unsigned char Datarate, uns
 	}
 
 	return Data_Length;
+}
+
+void LoRa_Send_JoinReq(sLoRa_OTAA *OTAA_Data)
+{
+    unsigned char i;
+    
+    unsigned char RFM_Data[23];
+    sBuffer RFM_Package = { &RFM_Data[0], 0x00};
+    
+    sLoRa_Message Message;
+    
+    Message.MAC_Header = 0x00; //Join request
+    Message.Direction = 0x00; //Set up Direction
+    
+    //Construct OTAA Request message
+    //Load Header in package
+    RFM_Data[0] = Message.MAC_Header;
+    
+    //Load AppEUI in package
+    for(i = 0x00; i < 8; i++)
+    {
+        RFM_Data[i+1] = OTAA_Data->AppEUI[7-i];
+    }
+    
+    //Load DevEUI in package
+    for(i= 0x00; i < 8; i++)
+    {
+        RFM_Data[i+9] = OTAA_Data->DevEUI[7-i];
+    }
+    
+    //Load DevNonce in package
+    RFM_Data[17] = OTAA_Data->DevNonce[0];
+    RFM_Data[18] = OTAA_Data->DevNonce[1];
+
+    //Set length of package
+    RFM_Package.Counter = 19;
+    
+    //Get MIC
+    Calculate_MIC(&RFM_Package, OTAA_Data->AppKey, &Message);
+    
+    //Load MIC in package
+    RFM_Data[19] = Message.MIC[0];
+    RFM_Data[20] = Message.MIC[1];
+    RFM_Data[21] = Message.MIC[2];
+    RFM_Data[22] = Message.MIC[3];
+    
+    //Set lenght of package to the right length
+    RFM_Package.Counter = 23;
+    
+    //Send Package
+    RFM_Send_Package(&RFM_Package, Message.Direction);
 }

@@ -22,7 +22,7 @@
 * E-mail:   info@ideetron.nl
 ****************************************************************************************/
 /****************************************************************************************
-* Created on:         06-01-2017
+* Created on:         09-02-2017
 * Supported Hardware: ID150119-02 Nexus board with RFM95
 ****************************************************************************************/
 
@@ -32,8 +32,10 @@
 *****************************************************************************************
 */
 
+#include <p24F32KA302.h>
 #include "Encrypt.h"
 #include "AES-128.h"
+#include "Struct.h"
 
 /*
 *****************************************************************************************
@@ -41,10 +43,7 @@
 *****************************************************************************************
 */
 
-extern unsigned char NwkSkey[16];
-extern unsigned char AppSkey[16];
-
-void Encrypt_Payload(unsigned char *Data, unsigned char Data_Length, unsigned int Frame_Counter, unsigned char Direction, unsigned char *Address)
+void Encrypt_Payload(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message *Message)
 {
 	unsigned char i = 0x00;
 	unsigned char j;
@@ -54,14 +53,14 @@ void Encrypt_Payload(unsigned char *Data, unsigned char Data_Length, unsigned in
 	unsigned char Block_A[16];
 
 	//Calculate number of blocks
-	Number_of_Blocks = Data_Length / 16;
-	Incomplete_Block_Size = Data_Length % 16;
+	Number_of_Blocks = Buffer->Counter / 16;
+	Incomplete_Block_Size = Buffer->Counter % 16;
 	if(Incomplete_Block_Size != 0)
 	{
 		Number_of_Blocks++;
 	}
 
-	for(i = 1; i <= Number_of_Blocks; i++)
+	for(i = 0x00; i < Number_of_Blocks; i++)
 	{
 		Block_A[0] = 0x01;
 		Block_A[1] = 0x00;
@@ -69,33 +68,32 @@ void Encrypt_Payload(unsigned char *Data, unsigned char Data_Length, unsigned in
 		Block_A[3] = 0x00;
 		Block_A[4] = 0x00;
 
-		Block_A[5] = Direction;
+		Block_A[5] = Message->Direction;
 
-		Block_A[6] = Address[3];
-		Block_A[7] = Address[2];
-		Block_A[8] = Address[1];
-		Block_A[9] = Address[0];
+		Block_A[6] = Message->DevAddr[3];
+		Block_A[7] = Message->DevAddr[2];
+		Block_A[8] = Message->DevAddr[1];
+		Block_A[9] = Message->DevAddr[0];
 
-		Block_A[10] = (Frame_Counter & 0x00FF);
-		Block_A[11] = ((Frame_Counter >> 8) & 0x00FF);
+		Block_A[10] = (Message->Frame_Counter & 0x00FF);
+		Block_A[11] = ((Message->Frame_Counter >> 8) & 0x00FF);
 
 		Block_A[12] = 0x00; //Frame counter upper Bytes
 		Block_A[13] = 0x00;
 
 		Block_A[14] = 0x00;
 
-		Block_A[15] = i;
+		Block_A[15] = i + 1;
 
 		//Calculate S
-		AES_Encrypt(Block_A,AppSkey);
+		AES_Encrypt(Block_A,Session_Data->AppSKey);
 
 		//Check for last block
-		if(i != Number_of_Blocks)
+		if(i != (Number_of_Blocks - 1))
 		{
 			for(j = 0; j < 16; j++)
 			{
-				*Data = *Data ^ Block_A[j];
-				Data++;
+				Buffer->Data[(i*16)+j] ^= Block_A[j];
 			}
 		}
 		else
@@ -106,17 +104,65 @@ void Encrypt_Payload(unsigned char *Data, unsigned char Data_Length, unsigned in
 			}
 			for(j = 0; j < Incomplete_Block_Size; j++)
 			{
-				*Data = *Data ^ Block_A[j];
-				Data++;
+				Buffer->Data[(i*16)+j] ^= Block_A[j];
 			}
 		}
 	}
 }
 
-void Calculate_MIC(unsigned char *Data, unsigned char *Final_MIC, unsigned char Data_Length, unsigned int Frame_Counter, unsigned char Direction, unsigned char *Address)
+void Construct_Data_MIC(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message *Message)
 {
-	unsigned char i;
-	unsigned char Block_B[16];
+    unsigned char i;
+    unsigned char MIC_Data[80];
+    sBuffer MIC_Buffer = { &MIC_Data[0], 0x00 };
+
+    unsigned char Block_B[16];
+
+    //Construct Block B
+	Block_B[0] = 0x49;
+	Block_B[1] = 0x00;
+	Block_B[2] = 0x00;
+	Block_B[3] = 0x00;
+	Block_B[4] = 0x00;
+
+	Block_B[5] = Message->Direction;
+
+	Block_B[6] = Message->DevAddr[3];
+	Block_B[7] = Message->DevAddr[2];
+	Block_B[8] = Message->DevAddr[1];
+	Block_B[9] = Message->DevAddr[0];
+
+	Block_B[10] = (Message->Frame_Counter & 0x00FF);
+	Block_B[11] = ((Message->Frame_Counter >> 8) & 0x00FF);
+
+	Block_B[12] = 0x00; //Frame counter upper bytes
+	Block_B[13] = 0x00;
+
+	Block_B[14] = 0x00;
+	Block_B[15] = Buffer->Counter;
+
+    //Copy Block B into MIC data
+    for(i = 0x00; i < 16; i++)
+    {
+        MIC_Data[i] = Block_B[i];
+    }
+
+    //Add data to it
+    for(i = 0x00; i < Buffer->Counter; i++)
+    {
+        MIC_Data[i + 16] = Buffer->Data[i];
+    }
+
+    //Calculate the correct buffer length
+    MIC_Buffer.Counter = 16 + Buffer->Counter;
+
+    //Calculate the MIC
+    Calculate_MIC(&MIC_Buffer, Session_Data->NwkSKey, Message);
+}
+
+void Calculate_MIC(sBuffer *Buffer, unsigned char *Key, sLoRa_Message *Message)
+{
+	unsigned char i, j;
 	unsigned char Key_K1[16] = {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -125,8 +171,6 @@ void Calculate_MIC(unsigned char *Data, unsigned char *Final_MIC, unsigned char 
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 	};
-
-	//unsigned char Data_Copy[16];
 
 	unsigned char Old_Data[16] = {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -139,77 +183,39 @@ void Calculate_MIC(unsigned char *Data, unsigned char *Final_MIC, unsigned char 
 
 	unsigned char Number_of_Blocks = 0x00;
 	unsigned char Incomplete_Block_Size = 0x00;
-	unsigned char Block_Counter = 0x01;
-
-	//Create Block_B
-	Block_B[0] = 0x49;
-	Block_B[1] = 0x00;
-	Block_B[2] = 0x00;
-	Block_B[3] = 0x00;
-	Block_B[4] = 0x00;
-
-	Block_B[5] = Direction;
-
-	Block_B[6] = Address[3];
-	Block_B[7] = Address[2];
-	Block_B[8] = Address[1];
-	Block_B[9] = Address[0];
-
-	Block_B[10] = (Frame_Counter & 0x00FF);
-	Block_B[11] = ((Frame_Counter >> 8) & 0x00FF);
-
-	Block_B[12] = 0x00; //Frame counter upper bytes
-	Block_B[13] = 0x00;
-
-	Block_B[14] = 0x00;
-	Block_B[15] = Data_Length;
 
 	//Calculate number of Blocks and blocksize of last block
-	Number_of_Blocks = Data_Length / 16;
-	Incomplete_Block_Size = Data_Length % 16;
+	Number_of_Blocks = Buffer->Counter / 16;
+	Incomplete_Block_Size = Buffer->Counter % 16;
 
+    //if there is an incomplete block at the end add 1 to the number of blocks
 	if(Incomplete_Block_Size != 0)
 	{
 		Number_of_Blocks++;
 	}
 
-	Generate_Keys(Key_K1, Key_K2);
-
-	//Preform Calculation on Block B0
-
-	//Preform AES encryption
-	AES_Encrypt(Block_B,NwkSkey);
-
-	//Copy Block_B to Old_Data
-	for(i = 0; i < 16; i++)
-	{
-		Old_Data[i] = Block_B[i];
-	}
+	Generate_Keys(Key, Key_K1, Key_K2);
 
 	//Preform full calculating until n-1 messsage blocks
-	while(Block_Counter < Number_of_Blocks)
+    for(j = 0x0; j < (Number_of_Blocks - 1); j++)
 	{
 		//Copy data into array
 		for(i = 0; i < 16; i++)
 		{
-			New_Data[i] = *Data;
-			Data++;
+			New_Data[i] = Buffer->Data[(j*16)+i];
 		}
 
 		//Preform XOR with old data
 		XOR(New_Data,Old_Data);
 
 		//Preform AES encryption
-		AES_Encrypt(New_Data,NwkSkey);
+		AES_Encrypt(New_Data,Key);
 
 		//Copy New_Data to Old_Data
 		for(i = 0; i < 16; i++)
 		{
 			Old_Data[i] = New_Data[i];
 		}
-
-		//Raise Block counter
-		Block_Counter++;
 	}
 
 	//Perform calculation on last block
@@ -219,8 +225,7 @@ void Calculate_MIC(unsigned char *Data, unsigned char *Final_MIC, unsigned char 
 		//Copy last data into array
 		for(i = 0; i < 16; i++)
 		{
-			New_Data[i] = *Data;
-			Data++;
+			New_Data[i] = Buffer->Data[((Number_of_Blocks -1)*16)+i];
 		}
 
 		//Preform XOR with Key 1
@@ -230,7 +235,7 @@ void Calculate_MIC(unsigned char *Data, unsigned char *Final_MIC, unsigned char 
 		XOR(New_Data,Old_Data);
 
 		//Preform last AES routine
-		AES_Encrypt(New_Data,NwkSkey);
+		AES_Encrypt(New_Data,Key);
 	}
 	else
 	{
@@ -239,8 +244,7 @@ void Calculate_MIC(unsigned char *Data, unsigned char *Final_MIC, unsigned char 
 		{
 			if(i < Incomplete_Block_Size)
 			{
-				New_Data[i] = *Data;
-				Data++;
+				New_Data[i] = Buffer->Data[((Number_of_Blocks -1)*16)+i];
 			}
 			if(i == Incomplete_Block_Size)
 			{
@@ -259,22 +263,22 @@ void Calculate_MIC(unsigned char *Data, unsigned char *Final_MIC, unsigned char 
 		XOR(New_Data,Old_Data);
 
 		//Preform last AES routine
-		AES_Encrypt(New_Data,NwkSkey);
+		AES_Encrypt(New_Data,Key);
 	}
 
-	Final_MIC[0] = New_Data[0];
-	Final_MIC[1] = New_Data[1];
-	Final_MIC[2] = New_Data[2];
-	Final_MIC[3] = New_Data[3];
+	Message->MIC[0] = New_Data[0];
+	Message->MIC[1] = New_Data[1];
+	Message->MIC[2] = New_Data[2];
+	Message->MIC[3] = New_Data[3];
 }
 
-void Generate_Keys(unsigned char *K1, unsigned char *K2)
+void Generate_Keys(unsigned char *Key, unsigned char *K1, unsigned char *K2)
 {
 	unsigned char i;
 	unsigned char MSB_Key;
 
 	//Encrypt the zeros in K1 with the NwkSkey
-	AES_Encrypt(K1,NwkSkey);
+	AES_Encrypt(K1,Key);
 
 	//Create K1
 	//Check if MSB is 1

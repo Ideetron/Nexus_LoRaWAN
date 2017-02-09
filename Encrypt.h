@@ -22,11 +22,20 @@
 * E-mail:   info@ideetron.nl
 ****************************************************************************************/
 /****************************************************************************************
-* Created on:         06-01-2017
+* Created on:         09-02-2017
 * Supported Hardware: ID150119-02 Nexus board with RFM95
 ****************************************************************************************/
+
 #ifndef ENCRYPT_H
 #define ENCRYPT_H
+
+/*
+********************************************************************************************
+* INCLUDES
+********************************************************************************************
+*/
+
+#include "Struct.h"
 
 /*
 *****************************************************************************************
@@ -34,9 +43,10 @@
 *****************************************************************************************
 */
 
-void Calculate_MIC(unsigned char *Data, unsigned char *Final_MIC, unsigned char Data_Length, unsigned int Frame_Counter, unsigned char Direction, unsigned char *Address);
-void Encrypt_Payload(unsigned char *Data, unsigned char Data_Length, unsigned int Frame_Counter, unsigned char Direction, unsigned char *Address);
-void Generate_Keys(unsigned char *K1, unsigned char *K2);
+void Construct_Data_MIC(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message *Message);
+void Calculate_MIC(sBuffer *Buffer, unsigned char *Key, sLoRa_Message *Message);
+void Encrypt_Payload(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message *Message);
+void Generate_Keys(unsigned char *Key, unsigned char *K1, unsigned char *K2);
 void Shift_Left(unsigned char *Data);
 void XOR(unsigned char *New_Data,unsigned char *Old_Data);
 

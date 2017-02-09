@@ -38,15 +38,6 @@
 #include "RFM95.h"
 #include "Struct.h"
 
-/*
-*****************************************************************************************
-* INCLUDE GLOBAL VARIABLES
-*****************************************************************************************
-*/
-
-extern unsigned char NwkSkey[16];
-extern unsigned char AppSkey[16];
-
 void UART_Send_Newline()
 {
   Serial.write(0x0D); //Carriage return
@@ -155,7 +146,7 @@ void Mac_DevAddr(sBuffer *UART_Buffer, unsigned char *DevAddr)
   UART_Send_Newline();
 }
 
-void Mac_NwkSkey(sBuffer *UART_Buffer)
+void Mac_NwkSKey(sBuffer *UART_Buffer, unsigned char *NwkSKey)
 {
   unsigned char i;
 
@@ -164,17 +155,17 @@ void Mac_NwkSkey(sBuffer *UART_Buffer)
   {
     for(i = 0; i < 16; i++)
     {
-      NwkSkey[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+16],UART_Buffer->Data[(i*2)+17]);
+      NwkSKey[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+16],UART_Buffer->Data[(i*2)+17]);
     }
   }
 
   //Send NwkSkey
-  Serial.write("NwkSkey: ");
-  UART_Send_Data(NwkSkey,0x10);
+  Serial.write("NwkSKey: ");
+  UART_Send_Data(NwkSKey,0x10);
   UART_Send_Newline();
 }
 
-void Mac_AppSkey(sBuffer *UART_Buffer)
+void Mac_AppSKey(sBuffer *UART_Buffer, unsigned char *AppSKey)
 {
   unsigned char i;
 
@@ -183,17 +174,17 @@ void Mac_AppSkey(sBuffer *UART_Buffer)
   {
     for(i = 0; i < 16; i++)
     {
-      AppSkey[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+16],UART_Buffer->Data[(i*2)+17]);
+      AppSKey[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+16],UART_Buffer->Data[(i*2)+17]);
     }
   }
 
   //Send AppSkey
-  Serial.write("AppSkey: ");
-  UART_Send_Data(AppSkey,0x10);
+  Serial.write("AppSKey: ");
+  UART_Send_Data(AppSKey,0x10);
   UART_Send_Newline();
 }
 
-void Mac_Appkey(sBuffer *UART_Buffer, unsigned char *AppKey)
+void Mac_AppKey(sBuffer *UART_Buffer, unsigned char *AppKey)
 {
   unsigned char i;
 

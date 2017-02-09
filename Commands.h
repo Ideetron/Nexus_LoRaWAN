@@ -40,9 +40,9 @@
 void UART_Send_Newline();
 void UART_Send_Data(unsigned char *Data, unsigned char Length);
 void Mac_DevAddr(sBuffer *UART_Buffer, unsigned char *DevAddr);
-void Mac_NwkSkey(sBuffer *UART_Buffer);
-void Mac_AppSkey(sBuffer *UART_Buffer);
-void Mac_Appkey(sBuffer *UART_Buffer, unsigned char *AppKey);
+void Mac_NwkSKey(sBuffer *UART_Buffer, unsigned char *NwkSKey);
+void Mac_AppSKey(sBuffer *UART_Buffer, unsigned char *AppSKey);
+void Mac_AppKey(sBuffer *UART_Buffer, unsigned char *AppKey);
 void Mac_AppEUI(sBuffer *UART_Buffer, unsigned char *AppEUI);
 void Mac_DevEUI(sBuffer *UART_Buffer, unsigned char *DevEUI);
 void Mac_DrTx(sBuffer *UART_Buffer, unsigned char *Datarate);

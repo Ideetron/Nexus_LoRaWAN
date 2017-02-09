@@ -35,8 +35,8 @@
 *****************************************************************************************
 */
 
-unsigned char LORA_Cycle(unsigned char *Data_Tx, unsigned char *Data_Rx, unsigned char Data_Length_Tx, unsigned char Datarate_Tx, unsigned char Datarate_Rx, unsigned char Channel_Tx, unsigned char Channel_Rx, unsigned char *Address);
-void LORA_Send_Data(unsigned char *Data, unsigned char Data_Length, unsigned int Frame_Counter_Up, unsigned char Datarate, unsigned char Channel, unsigned char *Address);
-unsigned char LORA_Receive_Data(unsigned char *Data, unsigned char Datarate, unsigned char Channel, unsigned char Address);
-
+void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message_Rx, sSettings *LoRa_Settings);
+void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *LoRa_Settings);
+void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message);
+void LoRa_Send_JoinReq(sLoRa_OTAA *OTAA_Data);
 #endif
