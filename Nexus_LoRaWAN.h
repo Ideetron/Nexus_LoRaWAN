@@ -37,7 +37,6 @@
 
 typedef enum {NO_UART_DATA, NEW_UART_DATA, UART_DATA_DONE} uart_t;
 typedef enum {NO_RX, NEW_RX} rx_t;
-typedef enum {NO_RFM_COMMAND, NEW_RFM_COMMAND, RFM_COMMAND_DONE, JOIN} RFM_command_t;
 
 /*
 *****************************************************************************************

@@ -30,12 +30,20 @@
 #define RFM95_H
 
 /*
+********************************************************************************************
+* INCLUDES
+********************************************************************************************
+*/
+
+#include "Struct.h"
+
+/*
 *****************************************************************************************
 * TYPE DEFENITIONS
 *****************************************************************************************
 */
 
-typedef enum {NO_MESSAGE,CRC_OK,MIC_OK,MESSAGE_DONE,TIMEOUT,WRONG_MESSAGE} message_t;
+typedef enum {NO_MESSAGE,NEW_MESSAGE,CRC_OK,MIC_OK,MESSAGE_DONE,TIMEOUT,WRONG_MESSAGE} message_t;
 
 /*
 *****************************************************************************************
@@ -44,12 +52,14 @@ typedef enum {NO_MESSAGE,CRC_OK,MIC_OK,MESSAGE_DONE,TIMEOUT,WRONG_MESSAGE} messa
 */
 
 void RFM_Init();
-void RFM_Send_Package(unsigned char *RFM_Tx_Package, unsigned char Package_Length);
-unsigned char RFM_Get_Package(unsigned char *RFM_Rx_Package);
+void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings);
+message_t RFM_Single_Receive(sSettings *LoRa_Settings);
+void RFM_Continuous_Receive(sSettings *LoRa_Settings);
+message_t RFM_Get_Package(sBuffer *RFM_Rx_Package);
 unsigned char RFM_Read(unsigned char RFM_Address);
 void RFM_Write(unsigned char RFM_Address, unsigned char RFM_Data);
-message_t RFM_Receive();
 void RFM_Change_Datarate(unsigned char Datarate);
 void RFM_Change_Channel(unsigned char Channel);
+void RFM_Switch_Mode(unsigned char Mode);
 
 #endif

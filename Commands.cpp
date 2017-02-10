@@ -337,7 +337,7 @@ void Mac_Power(sBuffer *UART_Buffer, unsigned char *Power)
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 17)
   {
     unsigned char RFM_Data;
-    
+
     *Power = ASCII2Hex(UART_Buffer->Data[15],UART_Buffer->Data[16]);
 
     //Check if power is not over 0x0F
@@ -375,7 +375,7 @@ void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm)
   //Send answer
   Serial.write("Confirm: ");
   UART_Send_Data(Confirm,0x01);
-  UART_Send_Newline();  
+  UART_Send_Newline();
 }
 
 void Mac_Channel_Hopping(sBuffer *UART_Buffer, unsigned char *Channel_Hopping)

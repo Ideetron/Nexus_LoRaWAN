@@ -32,6 +32,8 @@
 #include "Nexus_LoRaWAN.h"
 #include "Arduino.h"
 #include "Waitloop.h"
+#include "Struct.h"
+#include "Commands.h"
 
 /*
 *****************************************************************************************
@@ -42,17 +44,18 @@
 void RFM_Init()
 {
   //Switch RFM to sleep
+  //DONT USE Switch mode function
   RFM_Write(0x01,0x00);
 
+  //Wait until RFM is in sleep mode
+  WaitLoop(10);
+
   //Set RFM in LoRa mode
+  //DONT USE Switch mode function
   RFM_Write(0x01,0x80);
 
-  //Set RFM in Standby mode wait on mode ready
-  RFM_Write(0x01,0x81);
-  while (digitalRead(DIO5) == LOW)
-  {
-  }
-
+  //Swtich RFM to standby
+  RFM_Switch_Mode(0x01);
 
   //Set channel to channel 0 868.100 MHz
   RFM_Change_Channel(0x00);
@@ -94,16 +97,19 @@ void RFM_Init()
 *****************************************************************************************
 */
 
-void RFM_Send_Package(unsigned char *RFM_Tx_Package, unsigned char Package_Length)
+void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings)
 {
   unsigned char i;
   unsigned char RFM_Tx_Location = 0x00;
 
-  //Set RFM in Standby mode wait on mode ready
-  RFM_Write(0x01,0x81);
-  while (digitalRead(DIO5) == LOW)
-  {
-  }
+  //Set RFM in Standby mode
+  RFM_Switch_Mode(0x01);
+
+  //Switch Datarate
+  RFM_Change_Datarate(LoRa_Settings->Datarate_Tx);
+
+  //Switch Channel
+  RFM_Change_Channel(LoRa_Settings->Channel_Tx);
 
   //Switch DIO0 to TxDone
   RFM_Write(0x40,0x40);
@@ -113,7 +119,7 @@ void RFM_Send_Package(unsigned char *RFM_Tx_Package, unsigned char Package_Lengt
   RFM_Write(0x3B,0x1D);
 
   //Set payload length to the right length
-  RFM_Write(0x22,Package_Length);
+  RFM_Write(0x22,RFM_Tx_Package->Counter);
 
   //Get location of Tx part of FiFo
   RFM_Tx_Location = RFM_Read(0x0E);
@@ -122,10 +128,9 @@ void RFM_Send_Package(unsigned char *RFM_Tx_Package, unsigned char Package_Lengt
   RFM_Write(0x0D,RFM_Tx_Location);
 
   //Write Payload to FiFo
-  for (i = 0;i < Package_Length; i++)
+  for (i = 0;i < RFM_Tx_Package->Counter; i++)
   {
-    RFM_Write(0x00,*RFM_Tx_Package);
-    RFM_Tx_Package++;
+    RFM_Write(0x00, RFM_Tx_Package->Data[i]);
   }
 
   //Switch RFM to Tx
@@ -135,6 +140,13 @@ void RFM_Send_Package(unsigned char *RFM_Tx_Package, unsigned char Package_Lengt
   while(digitalRead(DIO0) == LOW)
   {
   }
+
+  //Change DIO 0 back to RxDone
+  RFM_Write(0x40,0x00);
+
+  //Invert IQ Back
+  RFM_Write(0x33,0x67);
+  RFM_Write(0x3B,0x19);
 }
 
 /*
@@ -143,27 +155,18 @@ void RFM_Send_Package(unsigned char *RFM_Tx_Package, unsigned char Package_Lengt
 *****************************************************************************************
 */
 
-message_t RFM_Receive()
+message_t RFM_Single_Receive(sSettings *LoRa_Settings)
 {
   message_t Message_Status = NO_MESSAGE;
 
-  unsigned char RFM_Interrupt;
-  unsigned char Timer = 0x00;
+  //Change Datarate
+  RFM_Change_Datarate(LoRa_Settings->Datarate_Rx);
 
-  //Change DIO 0 to RxDone
-  RFM_Write(0x40,0x00);
-
-  //Invert IQ
-  RFM_Write(0x33,0x67);
-  RFM_Write(0x3B,0x19);
+  //Change Channel
+  RFM_Change_Channel(LoRa_Settings->Channel_Rx);
 
   //Switch RFM to Single reception
-  RFM_Write(0x01,0x86);
-
-  //Wait on mode ready
-  while(digitalRead(DIO5) == LOW)
-  {
-  }
+  RFM_Switch_Mode(0x06);
 
   //Wait until RxDone or Timeout
   //Wait until timeout or RxDone interrupt
@@ -171,33 +174,35 @@ message_t RFM_Receive()
   {
   }
 
-  //Get interrupt register
-  RFM_Interrupt = RFM_Read(0x12);
-
   //Check for Timeout
   if(digitalRead(DIO1) == HIGH)
   {
     Message_Status = TIMEOUT;
+
+    //Clear interrupt register
+ 	RFM_Write(0x12,0xE0);
   }
 
   //Check for RxDone
   if(digitalRead(DIO0) == HIGH)
   {
-    //Check CRC
-    if((RFM_Interrupt & 0x20) != 0x20)
-    {
-      Message_Status = CRC_OK;
-    }
-    else
-    {
-      Message_Status = WRONG_MESSAGE;
-    }
+	  Message_Status = NEW_MESSAGE;
   }
 
-  //Clear interrupt register
-  RFM_Write(0x12,0xE0);
-
   return Message_Status;
+}
+
+void RFM_Continuous_Receive(sSettings *LoRa_Settings)
+{
+	//Change Datarate
+	RFM_Change_Datarate(LoRa_Settings->Datarate_Rx);
+
+	//Change Channel
+	RFM_Change_Channel(LoRa_Settings->Channel_Rx);
+
+	//Switch to continuous receive
+	RFM_Switch_Mode(0x05);
+
 }
 
 /*
@@ -211,24 +216,48 @@ message_t RFM_Receive()
 *****************************************************************************************
 */
 
-unsigned char RFM_Get_Package(unsigned char *RFM_Rx_Package)
+message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
 {
   unsigned char i;
-  unsigned char RFM_Package_Length        = 0x0000;
-  unsigned char RFM_Package_Location      = 0x0000;
+  unsigned char RFM_Interrupts = 0x00;
+  unsigned char RFM_Package_Location = 0x00;
+  message_t Message_Status;
+
+  //Get interrupt register
+  RFM_Interrupts = RFM_Read(0x12);
+
+  //Check CRC
+  if((RFM_Interrupts & 0x20) != 0x20)
+  {
+	  Message_Status = CRC_OK;
+
+	  Serial.write("CRC OK");
+
+	  UART_Send_Newline();
+  }
+  else
+  {
+	  Message_Status = WRONG_MESSAGE;
+
+	  Serial.write("CRC NOK");
+
+	  UART_Send_Newline();
+  }
 
   RFM_Package_Location = RFM_Read(0x10); /*Read start position of received package*/
-  RFM_Package_Length   = RFM_Read(0x13); /*Read length of received package*/
+  RFM_Rx_Package->Counter = RFM_Read(0x13); /*Read length of received package*/
 
   RFM_Write(0x0D,RFM_Package_Location); /*Set SPI pointer to start of package*/
 
-  for (i = RFM_Package_Length; i > 0; i--)
+  for (i = 0x00; i < RFM_Rx_Package->Counter; i++)
   {
-    *RFM_Rx_Package = RFM_Read(0x00);
-    RFM_Rx_Package++;
+    RFM_Rx_Package->Data[i] = RFM_Read(0x00);
   }
 
-  return RFM_Package_Length;
+  //Clear interrupt register
+  RFM_Write(0x12,0xE0);
+
+  return Message_Status;
 }
 
 /*
@@ -374,5 +403,18 @@ void RFM_Change_Channel(unsigned char Channel)
 			RFM_Write(0x07,0x61);
 			RFM_Write(0x08,0xBE);
 			break;
+	}
+}
+
+void RFM_Switch_Mode(unsigned char Mode)
+{
+    Mode = Mode | 0x80; //Set high bit for LoRa mode
+
+    //Switch mode on RFM module
+    RFM_Write(0x01,Mode);
+
+	//Wait on mode ready
+	while(digitalRead(DIO5) == LOW)
+	{
 	}
 }

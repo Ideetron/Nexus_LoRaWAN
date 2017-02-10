@@ -24,20 +24,20 @@
 /****************************************************************************************
 * Created on:         06-01-2017
 * Supported Hardware: ID150119-02 Nexus board with RFM95
-* 
+*
 * Description
-* 
+*
 * Minimal Uplink for LoRaWAN
-* 
+*
 * This code demonstrates a LoRaWAN connection on a Nexus board. This code sends a messege every minute
 * on chanell 0 (868.1 MHz) Spreading factor 7.
 * On every message the frame counter is raised
-* 
+*
 * This code does not include
 * Receiving packets and handeling
 * Channel switching
 * MAC control messages
-* Over the Air joining* 
+* Over the Air joining*
 ****************************************************************************************/
 
 /*
@@ -71,7 +71,7 @@ unsigned char AppSkey[16] = {
   0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
 };
 
-void setup() 
+void setup()
 {
    //Initialize the UART
   Serial.begin(9600);
@@ -79,12 +79,12 @@ void setup()
    //Initialise the SPI port
   SPI.begin();
   SPI.beginTransaction(SPISettings(4000000,MSBFIRST,SPI_MODE0));
-  
+
   //Initialize I/O pins
   pinMode(DS2401,OUTPUT);
   pinMode(MFP,INPUT);
   pinMode(DIO0,INPUT);
-  pinMode(DIO1,INPUT); 
+  pinMode(DIO1,INPUT);
   pinMode(DIO5,INPUT);
   pinMode(DIO2,INPUT);
   pinMode(CS,OUTPUT);
@@ -96,17 +96,17 @@ void setup()
   WaitLoop_Init();
 
   //Wait until RFM module is started
-  WaitLoop(20);   
+  WaitLoop(20);
 }
 
-void loop() 
+void loop()
 {
   unsigned char i;
-  
+
   uart_t        UART_Status         = NO_UART_DATA;
   RFM_command_t RFM_Command_Status  = NO_RFM_COMMAND;
   rx_t          Rx_Status           = NO_RX;
-    
+
   unsigned char NwkSKey[16] = {
       0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
       0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
@@ -119,9 +119,9 @@ void loop()
 
   unsigned int Frame_Counter_Tx = 0x0000;
   unsigned char Address_Tx[4] = {0x00, 0x00, 0x00, 0x00};
-    
+
   sLoRa_Session Session_Data = {NwkSKey, AppSKey, Address_Tx, &Frame_Counter_Tx};
-  
+
   unsigned char DevEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   unsigned char AppEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   unsigned char AppKey[16] = {
@@ -131,7 +131,7 @@ void loop()
   unsigned char DevNonce[2] = {0x00, 0x00};
   unsigned char AppNonce[3] = {0x00, 0x00, 0x00};
   unsigned char NetID[3] = {0x00, 0x00, 0x00};
-    
+
   sLoRa_OTAA OTAA_Data = {DevEUI, AppEUI, AppKey, DevNonce, AppNonce, NetID};
 
   unsigned char Datarate_Tx = 0x00; //set to SF12 BW 125 kHz
@@ -142,12 +142,12 @@ void loop()
   sSettings LoRa_Settings;
 
   LoRa_Settings.Mote_Class = 0x00; //0x00 is type A, 0x01 is type C
-    
+
   LoRa_Settings.Datarate_Rx = 0x03;
   LoRa_Settings.Channel_Rx = 0x10;
   LoRa_Settings.Datarate_Tx = 0x00;
   LoRa_Settings.Channel_Tx = 0x00;
-    
+
   LoRa_Settings.Confirm = 0x00; //0x00 unconfirmed, 0x01 confirmed
   LoRa_Settings.Channel_Hopping = 0x00; //0x00 no channel hopping, 0x01 channel hopping
 
@@ -156,16 +156,18 @@ void loop()
 
   unsigned char Data_Tx[64];
   sBuffer Buffer_Tx = {Data_Tx, 0x00};
-  
+
   unsigned char Data_Rx[64];
   sBuffer Buffer_Rx = {Data_Rx, 0x00};
-  
+
   unsigned int UART_Timer = 0;
   unsigned char UART_Data[111];
   sBuffer UART_Rx_Buffer = { UART_Data, 0x00 };
 
   sLoRa_Message Message_Rx;
-  
+
+  Message_Rx.Direction = 0x01; //Set down direction for Rx message
+
   unsigned char DS_Bytes[8];
   unsigned char DS_Status = 0x00;
 
@@ -180,10 +182,10 @@ void loop()
   }
 
   //Load First 4 bytes in Device ID
-  DevAddr[0] = DS_Bytes[4];
-  DevAddr[1] = DS_Bytes[3];
-  DevAddr[2] = DS_Bytes[2];
-  DevAddr[3] = DS_Bytes[1];
+  Address_Tx[0] = DS_Bytes[4];
+  Address_Tx[1] = DS_Bytes[3];
+  Address_Tx[2] = DS_Bytes[2];
+  Address_Tx[3] = DS_Bytes[1];
 
   //Initialize RFM module
   RFM_Init();
@@ -203,9 +205,9 @@ void loop()
       //Clear Timer 2 and compare flag
       TCNT2 = 0x00;
       TIFR2 = 0x02;
-           
+
     }
-    
+
     //Check for Serail data
     if(Serial.available() != 0)
     {
@@ -252,9 +254,9 @@ void loop()
           {
             //Set join command
             RFM_Command_Status = JOIN;
-          }          
+          }
         }
-        
+
         //Check for a data command
         if(UART_Data[4] == 'd' && UART_Data[5] == 'a' && UART_Data[6] == 't' && UART_Data[7] == 'a')
         {
@@ -265,34 +267,34 @@ void loop()
             RFM_Command_Status = NEW_RFM_COMMAND;
 
             Mac_Data(&UART_Rx_Buffer, &Buffer_Tx);
-          }         
+          }
         }
 
         //Check for reset command
         if(UART_Data[4] == 'r' && UART_Data[5] == 'e' && UART_Data[6] == 's' && UART_Data[7] == 'e' && UART_Data[8] == 't')
         {
-          
-        }        
-        
+
+        }
+
         //Check for a set or get command
         if((UART_Data[4] == 's' || UART_Data[4] == 'g') && UART_Data[5] == 'e' && UART_Data[6] == 't')
         {
           //mac set/get devaddr command
           if(UART_Data[8] == 'd' && UART_Data[9] == 'e' && UART_Data[10] == 'v' && UART_Data[11] == 'a' && UART_Data[12] == 'd' && UART_Data[13] == 'd' && UART_Data[14] == 'r')
           {
-            Mac_DevAddr(&UART_Rx_Buffer, Addres_Tx);
+            Mac_DevAddr(&UART_Rx_Buffer, Address_Tx);
 
             //Reset frame counter
             Frame_Counter_Tx = 0x0000;
 
             //Reset RFM command status
-            RFM_Command_Satus = NO_RFM_COMMAND;
+            RFM_Command_Status = NO_RFM_COMMAND;
           }
 
           //mac set/get nwkskey
           if(UART_Data[8] == 'n' && UART_Data[9] == 'w' && UART_Data[10] == 'k' && UART_Data[11] == 's' && UART_Data[12] == 'k' && UART_Data[13] == 'e' && UART_Data[14] == 'y')
           {
-            Mac_NwkSkey(&UART_Rx_Buffer, NwkSKey);
+            Mac_NwkSKey(&UART_Rx_Buffer, NwkSKey);
 
             //Reset frame counter
             Frame_Counter_Tx = 0x0000;
@@ -300,11 +302,11 @@ void loop()
             //Reset RFM commando
             RFM_Command_Status = NO_RFM_COMMAND;
           }
-          
+
           //mac set/get appskey
           if(UART_Data[8] == 'a' && UART_Data[9] == 'p' && UART_Data[10] == 'p' && UART_Data[11] == 's' && UART_Data[12] == 'k' && UART_Data[13] == 'e' && UART_Data[14] == 'y')
           {
-            Mac_AppSkey(&UART_Rx_Buffer, AppSKey);
+            Mac_AppSKey(&UART_Rx_Buffer, AppSKey);
 
             //Reset frame counter
             Frame_Counter_Tx = 0x0000;
@@ -348,7 +350,7 @@ void loop()
             //Reset RFM command
             RFM_Command_Status = NO_RFM_COMMAND;
           }
-          
+
           //mac set/get drrx
           if(UART_Data[8] == 'd' && UART_Data[9] == 'r' && UART_Data[10] == 'r' && UART_Data[11] == 'x')
           {
@@ -366,7 +368,7 @@ void loop()
             //Reset RFM command
             RFM_Command_Status = NO_RFM_COMMAND;
           }
-          
+
           //mac set/get chrx
           if(UART_Data[8] == 'c' && UART_Data[9] == 'h' && UART_Data[10] == 'r' && UART_Data[11] == 'x')
           {
@@ -375,7 +377,7 @@ void loop()
             //Reset RFM command
             RFM_Command_Status = NO_RFM_COMMAND;
           }
-          
+
           //mac set/get pwridx
           if(UART_Data[8] == 'p' && UART_Data[9] == 'w' && UART_Data[10] == 'r' && UART_Data[11] == 'i' && UART_Data[12] == 'd' && UART_Data[13] == 'x')
           {
@@ -405,7 +407,7 @@ void loop()
             //Reset RFM command
             RFM_Command_Status = NO_RFM_COMMAND;
           }
-          
+
         }
       }
 
@@ -429,7 +431,7 @@ void loop()
       while(Serial.available() != 0)
       {
         UART_Data[0] = Serial.read();
-      }      
+      }
     }
 
     //Type A mote transmit receive cycle
@@ -445,29 +447,36 @@ void loop()
       if(RFM_Command_Status == JOIN)
       {
         //Start join precedure
-        LoRa_Send_JoinReq(&OTAA_Data);
+        LoRa_Send_JoinReq(&OTAA_Data, &LoRa_Settings);
 
         //Clear RFM_Command
         RFM_Command_Status = NO_RFM_COMMAND;
       }
-      
+
       //Transmit
       if(RFM_Command_Status == NEW_RFM_COMMAND)
       {
         //Lora send data
+        LORA_Send_Data(&Buffer_Tx, &Session_Data, &LoRa_Settings);
       }
 
       //Receive
       if(digitalRead(DIO0) == HIGH)
       {
         //Get data
+        LORA_Receive_Data(&Buffer_Rx, &Session_Data, &OTAA_Data, &Message_Rx, &LoRa_Settings);
+
+        Rx_Status = NEW_RX;
       }
     }
 
     //If there is new data
     if(Rx_Status == NEW_RX)
     {
-      
-    }    
+		//Check if there is data in the received message
+		if(Buffer_Rx.Counter != 0x00)
+		{
+		}
+    }
   }//While(1)
 }
