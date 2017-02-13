@@ -39,6 +39,7 @@
 #include "Waitloop.h"
 #include "Struct.h"
 #include "Commands.h"
+#include "Nexus_LoRaWAN.h"
 
 /*
 *****************************************************************************************
@@ -65,8 +66,8 @@ void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, 
 	unsigned char i;
 
 	//Time to wait in ms for receive slot 2
-	unsigned char Receive_Delay_2 = 17;
-	unsigned char Receive_Delay_JoinAck = 57; //NEED TO CHECK THIS NUMBER
+	unsigned int Receive_Delay_2 = 2000;
+	unsigned int Receive_Delay_JoinAck = 57; //NEED TO CHECK THIS NUMBER
 
 	if(*RFM_Command == JOIN)
   	{
@@ -81,15 +82,13 @@ void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, 
 
   	if(*RFM_Command == NEW_RFM_COMMAND)
   	{
-		LORA_Send_Data(Data_Tx, Session_Data, LoRa_Settings);
-
-    	for(i = 0; i <= Receive_Delay_2; i ++ )
-    	{
-    	  WaitLoop(100);
-    	}
+  	  LORA_Send_Data(Data_Tx, Session_Data, LoRa_Settings);
+  	  
+  	  WaitLoop(Receive_Delay_2);
+      
     }
 
-	LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx, LoRa_Settings);
+	 LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx, LoRa_Settings);
 }
 
 /*
@@ -225,6 +224,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 	sBuffer RFM_Package = {&RFM_Data[0], 0x00};
 
 	unsigned char MIC_Check;
+  unsigned char Address_Check;
 
 	unsigned char Frame_Options_Length;
 
@@ -245,7 +245,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 		Message_Status = NEW_MESSAGE;
 	}
 
-	if(Message_Status == NEW_MESSAGE);
+	if(Message_Status == NEW_MESSAGE)
 	{
 		Message_Status = RFM_Get_Package(&RFM_Package);
 
@@ -412,7 +412,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 
 			//Send Mac Header
 			Serial.write("Mac Header: ");
-			UART_Send_Data(Message->MAC_Header, 0x01);
+			UART_Send_Data(&Message->MAC_Header, 0x01);
 			UART_Send_Newline();
 
 			//Send Dev addr
@@ -422,13 +422,13 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 
 			//Send Frame control field
 			Serial.write("Frame Control: ");
-			UART_Send_Data(Message->Frame_Control,0x01);
+			UART_Send_Data(&Message->Frame_Control,0x01);
 			UART_Send_Newline();
 
 			//Send frame counter
 			Serial.write("Frame Counter: ");
-			UART_Send_Data(RFM_Data[7],0x01);
-			UART_Send_Data(RFM_Data[6],0x01);
+			UART_Send_Data(&RFM_Data[7],0x01);
+			UART_Send_Data(&RFM_Data[6],0x01);
 			UART_Send_Newline();
 
 			//Lower Package length with 4 to remove MIC length
@@ -550,7 +550,7 @@ void LoRa_Send_JoinReq(sLoRa_OTAA *OTAA_Data, sSettings *LoRa_Settings)
     }
 
     //Generate DevNonce
-
+    Generate_DevNonce(OTAA_Data->DevNonce);
 
     //Load DevNonce in package
     RFM_Data[17] = OTAA_Data->DevNonce[0];
@@ -574,3 +574,14 @@ void LoRa_Send_JoinReq(sLoRa_OTAA *OTAA_Data, sSettings *LoRa_Settings)
     //Send Package
     RFM_Send_Package(&RFM_Package, LoRa_Settings);
 }
+
+void Generate_DevNonce(unsigned char *DevNonce)
+{
+  unsigned int RandNumber;
+
+  RandNumber = random(0xFFFF);
+  
+  DevNonce[0] = RandNumber & 0x00FF;
+  DevNonce[1] = (RandNumber >> 8) & 0x00FF;
+}
+

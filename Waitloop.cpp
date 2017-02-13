@@ -62,9 +62,9 @@ void WaitLoop_Init()
 * Arguments		: ms number of milisecond to wait
 *****************************************************************************************
 */
-void WaitLoop(unsigned char ms)
+void WaitLoop(unsigned int ms)
 {
-  unsigned char Counter = 0x00;
+  unsigned int Counter = 0x0000;
 
   //Clear Timer 2
   TCNT2 = 0x00;

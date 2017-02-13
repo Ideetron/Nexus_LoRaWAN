@@ -102,6 +102,7 @@ void setup()
 void loop()
 {
   unsigned char i;
+  unsigned char Random;
 
   uart_t        UART_Status         = NO_UART_DATA;
   RFM_command_t RFM_Command_Status  = NO_RFM_COMMAND;
@@ -148,7 +149,7 @@ void loop()
   LoRa_Settings.Datarate_Tx = 0x00;
   LoRa_Settings.Channel_Tx = 0x00;
 
-  LoRa_Settings.Confirm = 0x00; //0x00 unconfirmed, 0x01 confirmed
+  LoRa_Settings.Confirm = 0x01; //0x00 unconfirmed, 0x01 confirmed
   LoRa_Settings.Channel_Hopping = 0x00; //0x00 no channel hopping, 0x01 channel hopping
 
   unsigned char Sleep_Sec = 0x00;
@@ -191,7 +192,7 @@ void loop()
   RFM_Init();
 
   while(1)
-  {
+  {        
     //Raise timers on the hearthbeat of 1 ms
     //Check for compare flag of timer 2
     if((TIFR2 & 0x02) == 0x02)
@@ -439,6 +440,8 @@ void loop()
     {
       //LoRa cycle
       LORA_Cycle(&Buffer_Tx, &Buffer_Rx, &RFM_Command_Status, &Session_Data, &OTAA_Data, &Message_Rx, &LoRa_Settings);
+
+      RFM_Command_Status = NO_RFM_COMMAND;
     }
 
     //Type C mote transmit and receive handling
@@ -458,6 +461,8 @@ void loop()
       {
         //Lora send data
         LORA_Send_Data(&Buffer_Tx, &Session_Data, &LoRa_Settings);
+
+        RFM_Command_Status = NO_RFM_COMMAND;
       }
 
       //Receive
@@ -473,10 +478,21 @@ void loop()
     //If there is new data
     if(Rx_Status == NEW_RX)
     {
-		//Check if there is data in the received message
-		if(Buffer_Rx.Counter != 0x00)
-		{
-		}
+      //Check if there is data in the received message
+		  if(Buffer_Rx.Counter != 0x00)
+		  {
+        UART_Send_Data(Buffer_Rx.Data,Buffer_Rx.Counter);
+		  }
+      else
+      {
+        Serial.write("No data");
+      }
+
+      UART_Send_Newline();
+      UART_Send_Newline();
+      
+      Rx_Status = NO_RX;
+      
     }
   }//While(1)
 }

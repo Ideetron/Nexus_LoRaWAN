@@ -60,8 +60,11 @@ void RFM_Init()
   //Set channel to channel 0 868.100 MHz
   RFM_Change_Channel(0x00);
 
-  //PA pin (maximal power)
-  RFM_Write(0x09,0xFF);
+  //PA pin (minimal power)
+  RFM_Write(0x09,0xF0);
+
+  //Clear all masks
+  RFM_Write(0x11,0x00);
 
   //Switch LNA boost on
   RFM_Write(0x0C,0x23);
@@ -141,6 +144,9 @@ void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings)
   {
   }
 
+  
+  
+
   //Change DIO 0 back to RxDone
   RFM_Write(0x40,0x00);
 
@@ -168,25 +174,31 @@ message_t RFM_Single_Receive(sSettings *LoRa_Settings)
   //Switch RFM to Single reception
   RFM_Switch_Mode(0x06);
 
+  digitalWrite(LED,HIGH);
+
   //Wait until RxDone or Timeout
   //Wait until timeout or RxDone interrupt
   while((digitalRead(DIO0) == LOW) && (digitalRead(DIO1) == LOW))
   {
   }
 
+  digitalWrite(LED,LOW);
+
   //Check for Timeout
   if(digitalRead(DIO1) == HIGH)
   {
     Message_Status = TIMEOUT;
 
-    //Clear interrupt register
- 	RFM_Write(0x12,0xE0);
+    Serial.write("Timeout");
+
   }
 
   //Check for RxDone
   if(digitalRead(DIO0) == HIGH)
   {
 	  Message_Status = NEW_MESSAGE;
+
+   Serial.write("New message");
   }
 
   return Message_Status;
@@ -225,6 +237,11 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
 
   //Get interrupt register
   RFM_Interrupts = RFM_Read(0x12);
+    
+  //Clear interrupt register
+  RFM_Write(0x12,0xE0);
+
+  //UART_Send_Data(RFM_Interrupts,0x01);
 
   //Check CRC
   if((RFM_Interrupts & 0x20) != 0x20)
@@ -232,7 +249,7 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
 	  Message_Status = CRC_OK;
 
 	  Serial.write("CRC OK");
-
+   
 	  UART_Send_Newline();
   }
   else
@@ -254,8 +271,7 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
     RFM_Rx_Package->Data[i] = RFM_Read(0x00);
   }
 
-  //Clear interrupt register
-  RFM_Write(0x12,0xE0);
+
 
   return Message_Status;
 }

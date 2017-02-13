@@ -74,7 +74,7 @@ void AES_Encrypt(unsigned char *Data, unsigned char *Key)
 	}
 
 	//  Copy key to round key
-    memcpy( &Round_Key[0], &Key[0], 16 );
+  memcpy( &Round_Key[0], &Key[0], 16 );
 
 	//  Add round key
 	AES_Add_Round_Key( Round_Key, State );

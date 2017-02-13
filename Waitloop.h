@@ -36,6 +36,6 @@
 */
 
 void WaitLoop_Init();
-void WaitLoop(unsigned char ms);
+void WaitLoop(unsigned int ms);
 
 #endif
