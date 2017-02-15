@@ -27,17 +27,28 @@
 *
 * Description
 *
-* Minimal Uplink for LoRaWAN
+* This firmware demonstrates a LoRaWAN mote.
+* It is written specificly for a Nexus board that is connected to PC running a terminal application.
+* There are a few commands to make settings.
 *
-* This code demonstrates a LoRaWAN connection on a Nexus board. This code sends a messege every minute
-* on chanell 0 (868.1 MHz) Spreading factor 7.
-* On every message the frame counter is raised
+*This fimrware supports
+*Over The Air Activation
+*Activation By Personalization
+*Class switching between Class A and Class C motes
+*Channel hopping
 *
-* This code does not include
-* Receiving packets and handeling
-* Channel switching
-* MAC control messages
-* Over the Air joining*
+*The following settings kan be done
+*Channel Receive and Transmit
+*Datarate Receive and Transmit
+*Tranmit power
+*Confirmed or unconfirmed messages
+*Device Addres
+*Application Session Key
+*Network Session Key
+*Device EUI
+*Application EUI
+*Application key
+*Mote Class
 ****************************************************************************************/
 
 /*
@@ -73,7 +84,7 @@ unsigned char AppSkey[16] = {
 
 void setup()
 {
-   //Initialize the UART
+   //Initialize the UART on 9600 baud 8N1
   Serial.begin(9600);
 
    //Initialise the SPI port
@@ -93,6 +104,7 @@ void setup()
   digitalWrite(DS2401,HIGH);
   digitalWrite(CS,HIGH);
 
+  //Initialise timer 2 for 1ms waitloops
   WaitLoop_Init();
 
   //Wait until RFM module is started
@@ -102,12 +114,12 @@ void setup()
 void loop()
 {
   unsigned char i;
-  unsigned char Random;
 
   uart_t        UART_Status         = NO_UART_DATA;
   RFM_command_t RFM_Command_Status  = NO_RFM_COMMAND;
   rx_t          Rx_Status           = NO_RX;
 
+  //Initialise session data struct
   unsigned char NwkSKey[16] = {
       0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
       0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
@@ -123,6 +135,7 @@ void loop()
 
   sLoRa_Session Session_Data = {NwkSKey, AppSKey, Address_Tx, &Frame_Counter_Tx};
 
+  //Initialize OTAA data struct
   unsigned char DevEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   unsigned char AppEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   unsigned char AppKey[16] = {
@@ -135,6 +148,7 @@ void loop()
 
   sLoRa_OTAA OTAA_Data = {DevEUI, AppEUI, AppKey, DevNonce, AppNonce, NetID};
 
+  //Initialise LoRA settings struct
   unsigned char Datarate_Tx = 0x00; //set to SF12 BW 125 kHz
   unsigned char Datarate_Rx = 0x03; //set to SF9 BW 125 kHz
   unsigned char Channel_Tx = 0x00; //set to 868.100 MHz
@@ -149,29 +163,28 @@ void loop()
   LoRa_Settings.Datarate_Tx = 0x00;
   LoRa_Settings.Channel_Tx = 0x00;
 
-  LoRa_Settings.Confirm = 0x01; //0x00 unconfirmed, 0x01 confirmed
+  LoRa_Settings.Confirm = 0x00; //0x00 unconfirmed, 0x01 confirmed
   LoRa_Settings.Channel_Hopping = 0x00; //0x00 no channel hopping, 0x01 channel hopping
 
-  unsigned char Sleep_Sec = 0x00;
-  unsigned char Sleep_Time = 0x01;
-
+  //Initialise buffer for data to transmit
   unsigned char Data_Tx[64];
   sBuffer Buffer_Tx = {Data_Tx, 0x00};
 
+  //Initialise buffer for data to receive
   unsigned char Data_Rx[64];
   sBuffer Buffer_Rx = {Data_Rx, 0x00};
 
+  //Initialise UART receive buffer
   unsigned int UART_Timer = 0;
   unsigned char UART_Data[111];
   sBuffer UART_Rx_Buffer = { UART_Data, 0x00 };
 
-  unsigned int Join_Timer = 0;
-  unsigned char Join_Status = 0x00;
-
+  //Initialise Receive message
   sLoRa_Message Message_Rx;
 
   Message_Rx.Direction = 0x01; //Set down direction for Rx message
 
+  //Initialise DS2401 bytes
   unsigned char DS_Bytes[8];
   unsigned char DS_Status = 0x00;
 
@@ -204,11 +217,6 @@ void loop()
       if(UART_Status == NEW_UART_DATA)
       {
         UART_Timer++;
-      }
-
-      if(Join_Status == 0x01)
-      {
-        Join_Timer++;
       }
 
       //Clear Timer 2 and compare flag
@@ -264,7 +272,7 @@ void loop()
             Serial.write("Join");
 
             UART_Send_Newline();
-            
+
             //Set join command
             RFM_Command_Status = JOIN;
           }
@@ -464,10 +472,6 @@ void loop()
         //Start join precedure
         LoRa_Send_JoinReq(&OTAA_Data, &LoRa_Settings);
 
-        Join_Timer = 0;
-
-        Join_Status = 0x01;
-
         //Clear RFM_Command
         RFM_Command_Status = NO_RFM_COMMAND;
       }
@@ -484,11 +488,6 @@ void loop()
       //Receive
       if(digitalRead(DIO0) == HIGH)
       {
-        UART_Send_Data(((Join_Timer >> 8) & 0x00FF),0x01);
-        UART_Send_Data((Join_Timer & 0x00FF),0x01);
-
-        UART_Send_Newline();
-        
         //Get data
         LORA_Receive_Data(&Buffer_Rx, &Session_Data, &OTAA_Data, &Message_Rx, &LoRa_Settings);
 
@@ -499,21 +498,20 @@ void loop()
     //If there is new data
     if(Rx_Status == NEW_RX)
     {
-      //Check if there is data in the received message
-		  if(Buffer_Rx.Counter != 0x00)
-		  {
-        UART_Send_Data(Buffer_Rx.Data,Buffer_Rx.Counter);
-		  }
-      else
-      {
-        Serial.write("No data");
-      }
+		//Check if there is data in the received message
+      	if(Buffer_Rx.Counter != 0x00)
+		{
+			UART_Send_Data(Buffer_Rx.Data,Buffer_Rx.Counter);
+		}
+      	else
+      	{
+      	  Serial.write("No data");
+      	}
 
-      UART_Send_Newline();
-      UART_Send_Newline();
-      
-      Rx_Status = NO_RX;
-      
+      	UART_Send_Newline();
+      	UART_Send_Newline();
+
+      	Rx_Status = NO_RX;
     }
   }//While(1)
 }

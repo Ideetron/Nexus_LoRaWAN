@@ -36,11 +36,13 @@
 ********************************************************************************************
 */
 
+//Struct used for Buffers
 typedef struct {
     unsigned char *Data;
     unsigned char Counter;
 } sBuffer;
 
+//Stuct used to store session data of a LoRaWAN session
 typedef struct {
     unsigned char *NwkSKey;
     unsigned char *AppSKey;
@@ -57,6 +59,7 @@ typedef struct {
     unsigned char *NetID;
 } sLoRa_OTAA;
 
+//Struct to store information of a LoRaWAN message to transmit or received
 typedef struct{
     unsigned char MAC_Header;
     unsigned char DevAddr[4];
@@ -68,15 +71,16 @@ typedef struct{
     unsigned char Direction;
 } sLoRa_Message;
 
+//Struct used for storing settings of the mote
 typedef struct {
-    unsigned char Confirm;
-    unsigned char Mote_Class;
-    unsigned char Datarate_Tx;
-    unsigned char Datarate_Rx;
-    unsigned char Channel_Tx;
-    unsigned char Channel_Rx;
-    unsigned char Channel_Hopping;
-    unsigned char Transmit_Power;
+    unsigned char Confirm;			//0x00 Unconfirmed, 0x01 Confirmed
+    unsigned char Mote_Class;		//0x00 Class A, 0x01 Class C
+    unsigned char Datarate_Tx;		//See RFM file
+    unsigned char Datarate_Rx;		//See RFM file
+    unsigned char Channel_Tx;		//See RFM file
+    unsigned char Channel_Rx;		//See RFM filed
+    unsigned char Channel_Hopping;	//0x00 No hopping, 0x01 Hopping
+    unsigned char Transmit_Power;	//0x00 to 0x0F
 } sSettings;
 
 

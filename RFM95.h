@@ -43,7 +43,7 @@
 *****************************************************************************************
 */
 
-typedef enum {NO_MESSAGE,NEW_MESSAGE,CRC_OK,MIC_OK,MESSAGE_DONE,TIMEOUT,WRONG_MESSAGE} message_t;
+typedef enum {NO_MESSAGE,NEW_MESSAGE,CRC_OK,MIC_OK,ADDRESS_OK,MESSAGE_DONE,TIMEOUT,WRONG_MESSAGE} message_t;
 
 /*
 *****************************************************************************************

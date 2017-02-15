@@ -92,8 +92,8 @@ void RFM_Init()
 *****************************************************************************************
 * Description : Function for sending a package with the RFM
 *
-* Arguments   : *RFM_Tx_Package Pointer to arry with data to be send
-*               Package_Length  Length of the package to send
+* Arguments   : *RFM_Tx_Package pointer to buffer with data and counter of data
+*               *LoRa_Settings pointer to sSettings struct
 *****************************************************************************************
 */
 
@@ -140,7 +140,7 @@ void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings)
   while(digitalRead(DIO0) == LOW)
   {
   }
-  
+
   //Change DIO 0 back to RxDone
   RFM_Write(0x40,0x00);
 
@@ -158,7 +158,11 @@ void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings)
 
 /*
 *****************************************************************************************
-* Description  : Switches the RFM module to receive
+* Description : Function to switch RFM to single receive mode, used for Class A motes
+*
+* Arguments   : *LoRa_Settings pointer to sSettings struct
+*
+* Return	  : message_t Status of the received message
 *****************************************************************************************
 */
 
@@ -189,22 +193,24 @@ message_t RFM_Single_Receive(sSettings *LoRa_Settings)
   if(digitalRead(DIO1) == HIGH)
   {
     Message_Status = TIMEOUT;
-
-    Serial.write("Timeout");
-
   }
 
   //Check for RxDone
   if(digitalRead(DIO0) == HIGH)
   {
 	  Message_Status = NEW_MESSAGE;
-
-   Serial.write("New message");
   }
 
   return Message_Status;
 }
-
+
+/*
+*****************************************************************************************
+* Description : Function to switch RFM to continuous receive mode, used for Class C motes
+*
+* Arguments   : *LoRa_Settings pointer to sSettings struct
+*****************************************************************************************
+*/
 void RFM_Continuous_Receive(sSettings *LoRa_Settings)
 {
 	//Change Datarate
@@ -220,12 +226,12 @@ void RFM_Continuous_Receive(sSettings *LoRa_Settings)
 
 /*
 *****************************************************************************************
-* Description : This function will check for a CRC error and get the received data
-          from the RFM.
+* Description : Function to retrieve a message received by the RFM
 *
-* Arguments   : *RFM_Rxd_package  Pointer to arry for the received data
+* Arguments   : *RFM_Rx_Package pointer to sBuffer struct containing the data received
+*				and number of bytes received
 *
-* Returns   : Lenght of package
+* Return	  : message_t Status of the received message
 *****************************************************************************************
 */
 
@@ -238,7 +244,7 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
 
   //Get interrupt register
   RFM_Interrupts = RFM_Read(0x12);
-    
+
   //Clear interrupt register
   RFM_Write(0x12,0xE0);
 
@@ -250,7 +256,7 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
 	  Message_Status = CRC_OK;
 
 	  Serial.write("CRC OK");
-   
+
 	  UART_Send_Newline();
   }
   else
@@ -271,7 +277,7 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
   {
     RFM_Rx_Package->Data[i] = RFM_Read(0x00);
   }
-  
+
   return Message_Status;
 }
 
@@ -327,6 +333,14 @@ void RFM_Write(unsigned char RFM_Address, unsigned char RFM_Data)
   digitalWrite(10,HIGH);
 }
 
+/*
+*****************************************************************************************
+* Description : Function to change the datarate of the RFM module. Setting the following
+*				register: Spreading factor, Bandwith and low datarate optimisation.
+*
+* Arguments   : Datarate the datarate to set
+*****************************************************************************************
+*/
 void RFM_Change_Datarate(unsigned char Datarate)
 {
 	switch(Datarate)
@@ -369,6 +383,14 @@ void RFM_Change_Datarate(unsigned char Datarate)
 	}
 }
 
+/*
+*****************************************************************************************
+* Description : Function to change the channel of the RFM module. Setting the following
+*				register: Channel
+*
+* Arguments   : Channel the channel to set
+*****************************************************************************************
+*/
 void RFM_Change_Channel(unsigned char Channel)
 {
 	switch(Channel)
@@ -421,6 +443,15 @@ void RFM_Change_Channel(unsigned char Channel)
 	}
 }
 
+/*
+*****************************************************************************************
+* Description : Function to change the operation mode of the RFM. Switching mode and wait
+*				for mode ready flag
+*               DO NOT USE FOR SLEEP
+*
+* Arguments   : Mode the mode to set
+*****************************************************************************************
+*/
 void RFM_Switch_Mode(unsigned char Mode)
 {
     Mode = Mode | 0x80; //Set high bit for LoRa mode

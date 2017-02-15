@@ -50,17 +50,19 @@
 
 /*
 *****************************************************************************************
-* Description : Function that handles one cycle of sending and receiving with the LoRaWAN protocol.
-*               In this function the timing of receive slot 2 is handeld
+* Description : Function that handles a send and receive cycle with timing for receive slots.
+*				This function is only used for Class A motes. The wait times are tested with
+*				the iot.semtech.com site.
 *
-* Arguments   : *Data_Tx pointer to the array of data that will be transmitted
-*               *Data_Rx pointer to the array where the received data will be stored
-*               Data_Length_Tx nuber of bytes to be transmitted
-*
-* Returns     : Number of bytes received
+* Arguments   : *Data_Tx pointer to tranmit buffer
+*				*Data_Rx pointer to receive buffer
+*				*RFM_Command pointer to current RFM state
+*				*Session_Data pointer to sLoRa_Session sturct
+*				*OTAA_Data pointer to sLoRa_OTAA struct
+*				*Message_Rx pointer to sLoRa_Message struct used for the received message information
+*				*LoRa_Settings pointer to sSetting struct
 *****************************************************************************************
 */
-
 void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message_Rx, sSettings *LoRa_Settings)
 {
 	unsigned char i;
@@ -69,16 +71,17 @@ void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, 
 
 	if(*RFM_Command == JOIN)
   	{
-  	  //Send join Req
+  	  //Send join Reqest message
   	  LoRa_Send_JoinReq(OTAA_Data, LoRa_Settings);
-      
+
       WaitLoop(Receive_Delay_JoinAck);
   	}
 
+	//Send normal data message
   	if(*RFM_Command == NEW_RFM_COMMAND)
   	{
   	  LORA_Send_Data(Data_Tx, Session_Data, LoRa_Settings);
-  	  
+
   	  WaitLoop(Receive_Delay_2);
     }
 
@@ -87,11 +90,11 @@ void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, 
 
 /*
 *****************************************************************************************
-* Description : Function contstructs a LoRaWAN package and sends it
+* Description : Function that is used to build a LoRaWAN data message and then tranmit it.
 *
-* Arguments   : *Data pointer to the array of data that will be transmitted
-*               Data_Length nuber of bytes to be transmitted
-*               Frame_Counter_Up  Frame counter of upstream frames
+* Arguments   : *Data_Tx pointer to tranmit buffer
+*				*Session_Data pointer to sLoRa_Session sturct
+*				*LoRa_Settings pointer to sSetting struct
 *****************************************************************************************
 */
 void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *LoRa_Settings)
@@ -99,22 +102,27 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
   //Define variables
   unsigned char i;
 
+  //Initialise RFM buffer
   unsigned char RFM_Data[64];
   sBuffer RFM_Package = {&RFM_Data[0], 0x00};
 
+  //Initialise Message struct for a transmit message
   sLoRa_Message Message;
 
   Message.MAC_Header = 0x00;
-  Message.Frame_Port = 0x01;
+  Message.Frame_Port = 0x01; //Frame port always 1 for now
   Message.Frame_Control = 0x00;
 
+  //Load device addres from session data into the message
   Message.DevAddr[0] = Session_Data->DevAddr[0];
   Message.DevAddr[1] = Session_Data->DevAddr[1];
   Message.DevAddr[2] = Session_Data->DevAddr[2];
   Message.DevAddr[3] = Session_Data->DevAddr[3];
 
-  Message.Direction = 0x00; //Set up direction
+  //Set up direction
+  Message.Direction = 0x00;
 
+  //Load the frame counter from the session data into the message
   Message.Frame_Counter = *Session_Data->Frame_Counter;
 
   //Set confirmation
@@ -130,28 +138,33 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
   }
 
   //Build the Radio Package
+  //Load mac header
   RFM_Data[0] = Message.MAC_Header;
 
-  //MAYBEY add address to function to make it possible to sent ACKS to all incoming messages
-
+  //Load device address
   RFM_Data[1] = Message.DevAddr[3];
   RFM_Data[2] = Message.DevAddr[2];
   RFM_Data[3] = Message.DevAddr[1];
   RFM_Data[4] = Message.DevAddr[0];
 
+  //Load frame control
   RFM_Data[5] = Message.Frame_Control;
 
+  //Load frame counter
   RFM_Data[6] = (*Session_Data->Frame_Counter & 0x00FF);
   RFM_Data[7] = ((*Session_Data->Frame_Counter >> 8) & 0x00FF);
 
+  //Set data counter to 8
   RFM_Package.Counter = 8;
 
   //If there is data load the Frame_Port field
   //Encrypt the data and load the data
   if(Data_Tx->Counter > 0x00)
   {
+	//Load Frame port field
     RFM_Data[8] = Message.Frame_Port;
 
+    //Raise package counter
     RFM_Package.Counter++;
 
     //Encrypt the data
@@ -163,7 +176,7 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
       RFM_Data[RFM_Package.Counter + i] = Data_Tx->Data[i];
     }
 
-    //Add data Lenth to package length
+    //Add data Lenth to package counter
     RFM_Package.Counter = RFM_Package.Counter + Data_Tx->Counter;
   }
 
@@ -182,6 +195,7 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
   //Send Package
   RFM_Send_Package(&RFM_Package, LoRa_Settings);
 
+  //Raise Frame counter
   if(*Session_Data->Frame_Counter != 0xFFFF)
   {
     //Raise frame counter
@@ -191,27 +205,45 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
   {
     *Session_Data->Frame_Counter = 0x0000;
   }
+
+  //Change channel for next message if hopping is activated
+  if(LoRa_Settings->Channel_Hopping == 0x01)
+  {
+    if(LoRa_Settings->Channel_Tx < 0x07)
+    {
+      LoRa_Settings->Channel_Tx++;
+    }
+    else
+    {
+      LoRa_Settings->Channel_Tx = 0x00;
+    }
+  }
 }
 
 
 /*
 *****************************************************************************************
-* Description : Function that handles received data. Checks the MIC and deconstructs the LoRaWAN package
+* Description : Function that is used to receive a LoRaWAN message and retrieve the data from the RFM
+*               Also checks on CRC, MIC and Device Address
+*               This function is used for Class A and C motes.
 *
-* Arguments   : *Data pointer to the array where the received data will be stored
-*
-* Returns     : Number of bytes received
+* Arguments   : *Data_Rx pointer to receive buffer
+*				*Session_Data pointer to sLoRa_Session sturct
+*				*OTAA_Data pointer to sLoRa_OTAA struct
+*				*Message_Rx pointer to sLoRa_Message struct used for the received message information
+*				*LoRa_Settings pointer to sSetting struct
 *****************************************************************************************
 */
 void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message, sSettings *LoRa_Settings)
 {
 	unsigned char i;
 
+    //Initialise RFM buffer
 	unsigned char RFM_Data[64];
 	sBuffer RFM_Package = {&RFM_Data[0], 0x00};
 
 	unsigned char MIC_Check;
-  unsigned char Address_Check;
+    unsigned char Address_Check;
 
 	unsigned char Frame_Options_Length;
 
@@ -219,7 +251,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 
 	message_t Message_Status = NO_MESSAGE;
 
-	//If it is a type A device switch RFM to receive
+	//If it is a type A device switch RFM to single receive
 	if(LoRa_Settings->Mote_Class == 0x00)
 	{
 		Message_Status = RFM_Single_Receive(LoRa_Settings);
@@ -232,11 +264,12 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 		Message_Status = NEW_MESSAGE;
 	}
 
+	//If there is a message received get the data from the RFM
 	if(Message_Status == NEW_MESSAGE)
 	{
 		Message_Status = RFM_Get_Package(&RFM_Package);
 
-		//If mote class C switch RFM back to receive
+		//If mote class C switch RFM back to continuous receive
 		if(LoRa_Settings->Mote_Class == 0x01)
 		{
 			//Switch RFM to Continuous Receive
@@ -275,9 +308,10 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 			//Get MIC
 			Calculate_MIC(Data_Rx, OTAA_Data->AppKey, Message);
 
-			//Check MIC
+			//Clear MIC check counter
 			MIC_Check = 0x00;
 
+			//Compare MIC
 			for(i = 0x00; i < 4; i++)
 			{
 				if(Data_Rx->Data[Data_Rx->Counter + i] == Message->MIC[i])
@@ -286,6 +320,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 				}
 			}
 
+			//Check if MIC compares
 			if(MIC_Check == 0x04)
 			{
 				Message_Status = MIC_OK;
@@ -385,6 +420,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 		//Data message
 		if(Message->MAC_Header == 0x40 || Message->MAC_Header == 0x60 || Message->MAC_Header == 0x80 || Message->MAC_Header == 0xA0)
 		{
+			//Get device address from received data
 			Message->DevAddr[0] = RFM_Data[4];
 			Message->DevAddr[1] = RFM_Data[3];
 			Message->DevAddr[2] = RFM_Data[2];
@@ -397,34 +433,15 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 			Message->Frame_Counter = RFM_Data[7];
 			Message->Frame_Counter = (Message->Frame_Counter << 8) + RFM_Data[6];
 
-			//Send Mac Header
-			Serial.write("Mac Header: ");
-			UART_Send_Data(&Message->MAC_Header, 0x01);
-			UART_Send_Newline();
-
-			//Send Dev addr
-			Serial.write("Dev addr: ");
-			UART_Send_Data(Message->DevAddr,0x04);
-			UART_Send_Newline();
-
-			//Send Frame control field
-			Serial.write("Frame Control: ");
-			UART_Send_Data(&Message->Frame_Control,0x01);
-			UART_Send_Newline();
-
-			//Send frame counter
-			Serial.write("Frame Counter: ");
-			UART_Send_Data(&RFM_Data[7],0x01);
-			UART_Send_Data(&RFM_Data[6],0x01);
-			UART_Send_Newline();
-
 			//Lower Package length with 4 to remove MIC length
 			RFM_Package.Counter -= 4;
 
+			//Calculate MIC
 			Construct_Data_MIC(&RFM_Package, Session_Data, Message);
 
 			MIC_Check = 0x00;
 
+            //Compare MIC
 			for(i = 0x00; i < 4; i++)
 			{
 				if(RFM_Data[RFM_Package.Counter + i] == Message->MIC[i])
@@ -433,29 +450,80 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 				}
 			}
 
-			if(MIC_Check == 0x04)
-			{
-				Message_Status = MIC_OK;
+			//Check MIC
+      		if(MIC_Check == 0x04)
+      		{
+      		  Message_Status = MIC_OK;
 
-				Serial.write("MIC OK");
-			}
-			else
-			{
+      		  Serial.write("MIC OK");
+      		}
+      		else
+      		{
+      		  Message_Status = WRONG_MESSAGE;
+
+      		  //Send NOK
+      		  Serial.write("MIC NOK");
+
+      		}
+
+      		UART_Send_Newline();
+
+      		Address_Check = 0;
+
+      		//Check address
+      		if(MIC_Check == 0x04)
+      		{
+			      for(i = 0x00; i < 4; i++)
+			      {
+			        if(Session_Data->DevAddr[i] == Message->DevAddr[i])
+			        {
+				        Address_Check++;
+			        }
+			      }
+      		}
+
+		  	if(Address_Check == 0x04)
+		  	{
+				Message_Status = ADDRESS_OK;
+
+				Serial.write("ADDRESS OK");
+		  	}
+		  	else
+		  	{
 				Message_Status = WRONG_MESSAGE;
 
 				//Send NOK
-				Serial.write("MIC NOK");
+				Serial.write("ADDRESS NOK");
 
-				UART_Send_Newline();
-			}
+		  	}
 
-			UART_Send_Newline();
+		  	UART_Send_Newline();
 
-
-			//if MIC is OK then decrypt the data
+			//if the address is OK then decrypt the data
 			//Send the data to USB
-			if(Message_Status == MIC_OK)
+			if(Message_Status == ADDRESS_OK)
 			{
+				//Send Mac Header
+				Serial.write("Mac Header: ");
+				UART_Send_Data(&Message->MAC_Header, 0x01);
+				UART_Send_Newline();
+
+				//Send Dev addr
+				Serial.write("Dev addr: ");
+				UART_Send_Data(Message->DevAddr,0x04);
+				UART_Send_Newline();
+
+				//Send Frame control field
+				Serial.write("Frame Control: ");
+				UART_Send_Data(&Message->Frame_Control,0x01);
+				UART_Send_Newline();
+
+				//Send frame counter
+				Serial.write("Frame Counter: ");
+				UART_Send_Data(&RFM_Data[7],0x01);
+				UART_Send_Data(&RFM_Data[6],0x01);
+				UART_Send_Newline();
+
 				Data_Location = 8;
 
 				//Get length of frame options field
@@ -504,17 +572,27 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 		if(Message_Status == WRONG_MESSAGE)
 		{
 			Data_Rx->Counter = 0x00;
-        }
-    }
+ 		}
+	}
 }
 
+/*
+*****************************************************************************************
+* Description : Function that is used to send a join request to a network.
+*
+* Arguments   : *OTAA_Data pointer to sLoRa_OTAA struct
+*				*LoRa_Settings pointer to sSetting struct
+*****************************************************************************************
+*/
 void LoRa_Send_JoinReq(sLoRa_OTAA *OTAA_Data, sSettings *LoRa_Settings)
 {
     unsigned char i;
 
+	//Initialise RFM data buffer
     unsigned char RFM_Data[23];
     sBuffer RFM_Package = { &RFM_Data[0], 0x00};
 
+ 	//Initialise message sturct
     sLoRa_Message Message;
 
     Message.MAC_Header = 0x00; //Join request
@@ -562,12 +640,20 @@ void LoRa_Send_JoinReq(sLoRa_OTAA *OTAA_Data, sSettings *LoRa_Settings)
     RFM_Send_Package(&RFM_Package, LoRa_Settings);
 }
 
+/*
+*****************************************************************************************
+* Description : Function that is used to generate device nonce used in the join reqeust function
+*				This is based on a psuedo random function in the arduino library
+*
+* Arguments   : *Devnonce pointer to the devnonce arry of withc is unsigned char[2]
+*****************************************************************************************
+*/
 void Generate_DevNonce(unsigned char *DevNonce)
 {
   unsigned int RandNumber;
 
   RandNumber = random(0xFFFF);
-  
+
   DevNonce[0] = RandNumber & 0x00FF;
   DevNonce[1] = (RandNumber >> 8) & 0x00FF;
 }

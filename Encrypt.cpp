@@ -42,6 +42,15 @@
 *****************************************************************************************
 */
 
+/*
+*****************************************************************************************
+* Description : Function used to encrypt and decrypt the data in a LoRaWAN data message
+*
+* Arguments   : *Buffer pointer to the buffer cointaining the data to de/encrypt
+*				*Session_Data pointer to sLoRa_Session sturct
+*				*Message pointer to sLoRa_Message struct containing the message specific variables
+*****************************************************************************************
+*/
 void Encrypt_Payload(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message *Message)
 {
 	unsigned char i = 0x00;
@@ -109,6 +118,15 @@ void Encrypt_Payload(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message
 	}
 }
 
+/*
+*****************************************************************************************
+* Description : Function used to build a the data that is used for calculating the MIC of a data message
+*
+* Arguments   : *Buffer pointer to the buffer cointaining the data
+*				*Session_Data pointer to sLoRa_Session sturct
+*				*Message pointer to sLoRa_Message struct containing the message specific variables
+*****************************************************************************************
+*/
 void Construct_Data_MIC(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message *Message)
 {
     unsigned char i;
@@ -159,6 +177,15 @@ void Construct_Data_MIC(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Mess
     Calculate_MIC(&MIC_Buffer, Session_Data->NwkSKey, Message);
 }
 
+/*
+*****************************************************************************************
+* Description : Function used to calculate the MIC of data
+*
+* Arguments   : *Buffer pointer to the buffer cointaining the data the MIC should be calculated from
+*				*Key pointer to key used for the MIC calculation
+*				*Message pointer to sLoRa_Message struct containing the message specific variables
+*****************************************************************************************
+*/
 void Calculate_MIC(sBuffer *Buffer, unsigned char *Key, sLoRa_Message *Message)
 {
 	unsigned char i, j;
@@ -271,6 +298,15 @@ void Calculate_MIC(sBuffer *Buffer, unsigned char *Key, sLoRa_Message *Message)
 	Message->MIC[3] = New_Data[3];
 }
 
+/*
+*****************************************************************************************
+* Description : Function used to generate keys for the MIC calculation
+*
+* Arguments   : *Key pointer to key used for the MIC calculation
+*				*K1 pointer to Key1
+*				*K2 pointer ot Key2
+*****************************************************************************************
+*/
 void Generate_Keys(unsigned char *Key, unsigned char *K1, unsigned char *K2)
 {
 	unsigned char i;
