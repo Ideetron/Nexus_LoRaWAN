@@ -64,20 +64,15 @@
 void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, sLoRa_Session *Session_Data, sLoRa_OTAA *OTAA_Data, sLoRa_Message *Message_Rx, sSettings *LoRa_Settings)
 {
 	unsigned char i;
-
-	//Time to wait in ms for receive slot 2
-	unsigned int Receive_Delay_2 = 2000;
-	unsigned int Receive_Delay_JoinAck = 57; //NEED TO CHECK THIS NUMBER
+	unsigned int Receive_Delay_2 = 1950;
+	unsigned int Receive_Delay_JoinAck = 5950;
 
 	if(*RFM_Command == JOIN)
   	{
   	  //Send join Req
   	  LoRa_Send_JoinReq(OTAA_Data, LoRa_Settings);
-
-  	  for(i = 0; i <= Receive_Delay_JoinAck; i ++ )
-  	  {
-  	    WaitLoop(100);
-  	  }
+      
+      WaitLoop(Receive_Delay_JoinAck);
   	}
 
   	if(*RFM_Command == NEW_RFM_COMMAND)
@@ -85,7 +80,6 @@ void LORA_Cycle(sBuffer *Data_Tx, sBuffer *Data_Rx, RFM_command_t *RFM_Command, 
   	  LORA_Send_Data(Data_Tx, Session_Data, LoRa_Settings);
   	  
   	  WaitLoop(Receive_Delay_2);
-      
     }
 
 	 LORA_Receive_Data(Data_Rx, Session_Data, OTAA_Data, Message_Rx, LoRa_Settings);
@@ -196,13 +190,6 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
   else
   {
     *Session_Data->Frame_Counter = 0x0000;
-  }
-
-  //Switch RFM back to receive if it is a type C mote
-  if(LoRa_Settings->Mote_Class == 0x01)
-  {
-	  //Switch Back to Continuous receive
-	  RFM_Continuous_Receive(LoRa_Settings);
   }
 }
 

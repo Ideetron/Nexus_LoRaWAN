@@ -165,6 +165,9 @@ void loop()
   unsigned char UART_Data[111];
   sBuffer UART_Rx_Buffer = { UART_Data, 0x00 };
 
+  unsigned int Join_Timer = 0;
+  unsigned char Join_Status = 0x00;
+
   sLoRa_Message Message_Rx;
 
   Message_Rx.Direction = 0x01; //Set down direction for Rx message
@@ -192,7 +195,7 @@ void loop()
   RFM_Init();
 
   while(1)
-  {        
+  {
     //Raise timers on the hearthbeat of 1 ms
     //Check for compare flag of timer 2
     if((TIFR2 & 0x02) == 0x02)
@@ -201,6 +204,11 @@ void loop()
       if(UART_Status == NEW_UART_DATA)
       {
         UART_Timer++;
+      }
+
+      if(Join_Status == 0x01)
+      {
+        Join_Timer++;
       }
 
       //Clear Timer 2 and compare flag
@@ -253,6 +261,10 @@ void loop()
           //Check if there is no command pending
           if(RFM_Command_Status == NO_RFM_COMMAND)
           {
+            Serial.write("Join");
+
+            UART_Send_Newline();
+            
             //Set join command
             RFM_Command_Status = JOIN;
           }
@@ -403,7 +415,7 @@ void loop()
           //mac set/get class
           if(UART_Data[8] == 'c' && UART_Data[9] == 'l' && UART_Data[10] == 'a' && UART_Data[11] == 's' && UART_Data[12] == 's')
           {
-            Mac_Class(&UART_Rx_Buffer, &LoRa_Settings.Mote_Class);
+            Mac_Class(&UART_Rx_Buffer, &LoRa_Settings);
 
             //Reset RFM command
             RFM_Command_Status = NO_RFM_COMMAND;
@@ -452,6 +464,10 @@ void loop()
         //Start join precedure
         LoRa_Send_JoinReq(&OTAA_Data, &LoRa_Settings);
 
+        Join_Timer = 0;
+
+        Join_Status = 0x01;
+
         //Clear RFM_Command
         RFM_Command_Status = NO_RFM_COMMAND;
       }
@@ -468,6 +484,11 @@ void loop()
       //Receive
       if(digitalRead(DIO0) == HIGH)
       {
+        UART_Send_Data(((Join_Timer >> 8) & 0x00FF),0x01);
+        UART_Send_Data((Join_Timer & 0x00FF),0x01);
+
+        UART_Send_Newline();
+        
         //Get data
         LORA_Receive_Data(&Buffer_Rx, &Session_Data, &OTAA_Data, &Message_Rx, &LoRa_Settings);
 

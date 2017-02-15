@@ -63,9 +63,6 @@ void RFM_Init()
   //PA pin (minimal power)
   RFM_Write(0x09,0xF0);
 
-  //Clear all masks
-  RFM_Write(0x11,0x00);
-
   //Switch LNA boost on
   RFM_Write(0x0C,0x23);
 
@@ -143,16 +140,20 @@ void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings)
   while(digitalRead(DIO0) == LOW)
   {
   }
-
   
-  
-
   //Change DIO 0 back to RxDone
   RFM_Write(0x40,0x00);
 
   //Invert IQ Back
   RFM_Write(0x33,0x67);
   RFM_Write(0x3B,0x19);
+
+  //Switch RFM back to receive if it is a type C mote
+  if(LoRa_Settings->Mote_Class == 0x01)
+  {
+    //Switch Back to Continuous receive
+    RFM_Continuous_Receive(LoRa_Settings);
+  }
 }
 
 /*
@@ -171,18 +172,18 @@ message_t RFM_Single_Receive(sSettings *LoRa_Settings)
   //Change Channel
   RFM_Change_Channel(LoRa_Settings->Channel_Rx);
 
+  //Clear interrupt register
+  //To force the timeout pin low
+  RFM_Write(0x12,0xE0);
+
   //Switch RFM to Single reception
   RFM_Switch_Mode(0x06);
-
-  digitalWrite(LED,HIGH);
 
   //Wait until RxDone or Timeout
   //Wait until timeout or RxDone interrupt
   while((digitalRead(DIO0) == LOW) && (digitalRead(DIO1) == LOW))
   {
   }
-
-  digitalWrite(LED,LOW);
 
   //Check for Timeout
   if(digitalRead(DIO1) == HIGH)
@@ -270,9 +271,7 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
   {
     RFM_Rx_Package->Data[i] = RFM_Read(0x00);
   }
-
-
-
+  
   return Message_Status;
 }
 
