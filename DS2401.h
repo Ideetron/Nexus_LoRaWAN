@@ -42,3 +42,4 @@ unsigned char DS_ReadByte();
 unsigned char DS_CheckCRC(unsigned char *DS_bytes);
 
 #endif
+

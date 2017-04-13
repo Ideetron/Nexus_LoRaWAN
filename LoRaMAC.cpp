@@ -243,7 +243,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 	sBuffer RFM_Package = {&RFM_Data[0], 0x00};
 
 	unsigned char MIC_Check;
-    unsigned char Address_Check;
+  unsigned char Address_Check;
 
 	unsigned char Frame_Options_Length;
 
@@ -544,7 +544,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 
 					//Send Port field
 					Serial.write("Frame Port: ");
-					UART_Send_Data(Message->Frame_Port,0x01);
+					UART_Send_Data(&(Message->Frame_Port),0x01);
 					UART_Send_Newline();
 
 					//Calculate the amount of data in the package
@@ -657,4 +657,5 @@ void Generate_DevNonce(unsigned char *DevNonce)
   DevNonce[0] = RandNumber & 0x00FF;
   DevNonce[1] = (RandNumber >> 8) & 0x00FF;
 }
+
 

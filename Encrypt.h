@@ -51,3 +51,4 @@ void Shift_Left(unsigned char *Data);
 void XOR(unsigned char *New_Data,unsigned char *Old_Data);
 
 #endif
+

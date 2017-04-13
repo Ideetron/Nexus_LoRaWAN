@@ -44,3 +44,4 @@ void AES_Calculate_Round_Key(unsigned char Round, unsigned char *Round_Key);
 void Send_State();
 
 #endif
+

@@ -141,6 +141,9 @@ void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings)
   {
   }
 
+  //Clear interrupt
+  RFM_Write(0x12,0x08);
+
   //Change DIO 0 back to RxDone
   RFM_Write(0x40,0x00);
 
@@ -193,6 +196,9 @@ message_t RFM_Single_Receive(sSettings *LoRa_Settings)
   if(digitalRead(DIO1) == HIGH)
   {
     Message_Status = TIMEOUT;
+    Serial.write("Timeout");
+
+    UART_Send_Newline();
   }
 
   //Check for RxDone
@@ -203,7 +209,8 @@ message_t RFM_Single_Receive(sSettings *LoRa_Settings)
 
   return Message_Status;
 }
-
+
+
 /*
 *****************************************************************************************
 * Description : Function to switch RFM to continuous receive mode, used for Class C motes
@@ -245,9 +252,6 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
   //Get interrupt register
   RFM_Interrupts = RFM_Read(0x12);
 
-  //Clear interrupt register
-  RFM_Write(0x12,0xE0);
-
   //UART_Send_Data(RFM_Interrupts,0x01);
 
   //Check CRC
@@ -277,6 +281,9 @@ message_t RFM_Get_Package(sBuffer *RFM_Rx_Package)
   {
     RFM_Rx_Package->Data[i] = RFM_Read(0x00);
   }
+
+  //Clear interrupt register
+  RFM_Write(0x12,0xE0);
 
   return Message_Status;
 }
@@ -464,3 +471,4 @@ void RFM_Switch_Mode(unsigned char Mode)
 	{
 	}
 }
+

@@ -39,3 +39,4 @@ void Hex2ASCII(unsigned char ASCII, unsigned char *Upper_Nibble, unsigned char *
 unsigned char ASCII2Hex(unsigned char Upper_Nibble, unsigned char Lower_Nibble);
 
 #endif
+

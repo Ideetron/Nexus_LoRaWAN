@@ -57,3 +57,4 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 void LoRa_Send_JoinReq(sLoRa_OTAA *OTAA_Data, sSettings *LoRa_Settings);
 void Generate_DevNonce(unsigned char *DevNonce);
 #endif
+
