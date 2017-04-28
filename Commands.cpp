@@ -15,22 +15,17 @@
 * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************************/
 /****************************************************************************************
-* File:     Commands.cpp
+* File:     Commands.h
 * Author:   Gerben den Hartog
 * Compagny: Ideetron B.V.
 * Website:  http://www.ideetron.nl/LoRa
 * E-mail:   info@ideetron.nl
 ****************************************************************************************/
 /****************************************************************************************
-* Created on:         12-01-2017
+* Created on:         13-01-2017
 * Supported Hardware: ID150119-02 Nexus board with RFM95
 ****************************************************************************************/
 
-/*
-*****************************************************************************************
-* INCLUDE FILES
-*****************************************************************************************
-*/
 
 #include <SPI.h>
 #include "Commands.h"
@@ -57,6 +52,19 @@ void UART_Send_Data(unsigned char *Data, unsigned char Length)
     //Send the data
     Serial.write(Upper_Nibble);
     Serial.write(Lower_Nibble);
+  }
+}
+
+void EEPROMER(unsigned char *Data, unsigned char Length, char action, int eepromstartaddr){
+  int i;
+  
+  switch(action)
+  {
+    case 'w':                                         
+      for(i = 0; i<Length; i++)EEPROM.update(i+eepromstartaddr, Data[i]);
+      break;
+    case 'r':
+      for(i = 0; i<Length; i++)Data[i] = EEPROM.read(i+eepromstartaddr);
   }
 }
 
@@ -128,65 +136,105 @@ void UART_Send_Channel(unsigned char *Channel)
 
 }
 
-void Mac_DevAddr(sBuffer *UART_Buffer, unsigned char *DevAddr)
+void Mac_DevAddr(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
 
+  byte datalen = 4;
+  unsigned char eepromdata[4];
+   byte i;
+   int eepromstartaddr = 0;
   //Check if it is a set command and there is enough data sent
-  if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 24)
+  if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter >= 24)
   {
-    DevAddr[0] = ASCII2Hex(UART_Buffer->Data[16],UART_Buffer->Data[17]);
-    DevAddr[1] = ASCII2Hex(UART_Buffer->Data[18],UART_Buffer->Data[19]);
-    DevAddr[2] = ASCII2Hex(UART_Buffer->Data[20],UART_Buffer->Data[21]);
-    DevAddr[3] = ASCII2Hex(UART_Buffer->Data[22],UART_Buffer->Data[23]);
+    UART_Data[0] = ASCII2Hex(UART_Buffer->Data[16],UART_Buffer->Data[17]);
+    UART_Data[1] = ASCII2Hex(UART_Buffer->Data[18],UART_Buffer->Data[19]);
+    UART_Data[2] = ASCII2Hex(UART_Buffer->Data[20],UART_Buffer->Data[21]);
+    UART_Data[3] = ASCII2Hex(UART_Buffer->Data[22],UART_Buffer->Data[23]);
+    //for(i = start; i<datalen; i++)EEPROM.update(i, UART_Data[i]);
+    EEPROMER(UART_Data, datalen,'w', eepromstartaddr);
   }
-
-  //Send set DevAddr
+  
+  //for(i = start; i<datalen; i++)UART_Data[i] = EEPROM.read(i);
+  EEPROMER(UART_Data, datalen,'r', eepromstartaddr);
   Serial.write("DevAddr: ");
-  UART_Send_Data(DevAddr, 0x04);
+  UART_Send_Data(UART_Data, datalen);
   UART_Send_Newline();
 }
 
-void Mac_NwkSKey(sBuffer *UART_Buffer, unsigned char *NwkSKey)
+void Mac_NwkSKey(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
-  unsigned char i;
-
+  unsigned char i,j;
+  byte datalen = 0x10;
+  int eepromstartaddr = 4;
   //Check if it is a set command and there is enough data sent
-  if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 48)
+  if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter >= 48)
   {
-    for(i = 0; i < 16; i++)
+    for(i = 0,j=0; i < 16; i++,j++)
     {
-      NwkSKey[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+16],UART_Buffer->Data[(i*2)+17]);
+      UART_Data[i] = ASCII2Hex(UART_Buffer->Data[(j*2)+16],UART_Buffer->Data[(j*2)+17]);
     }
+     EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
   }
 
   //Send NwkSkey
+   EEPROMER(UART_Data, datalen, 'r', eepromstartaddr);
   Serial.write("NwkSKey: ");
-  UART_Send_Data(NwkSKey,0x10);
+  UART_Send_Data(UART_Data,0x10);
   UART_Send_Newline();
 }
 
-void Mac_AppSKey(sBuffer *UART_Buffer, unsigned char *AppSKey)
+void Mac_AppSKey(sBuffer *UART_Buffer, unsigned char *UART_Data)    //here
 {
-  unsigned char i;
+  unsigned char i, j;
+  byte datalen = 0x10;
+  int eepromstartaddr = 20;
 
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 48)
   {
-    for(i = 0; i < 16; i++)
+    for(i = 0,j=0; i < 16; i++,j++)
     {
-      AppSKey[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+16],UART_Buffer->Data[(i*2)+17]);
+      UART_Data[i] = ASCII2Hex(UART_Buffer->Data[(j*2)+16],UART_Buffer->Data[(j*2)+17]);
     }
+     EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
   }
 
+   EEPROMER(UART_Data, datalen, 'r', eepromstartaddr);
   //Send AppSkey
   Serial.write("AppSKey: ");
-  UART_Send_Data(AppSKey,0x10);
+  UART_Send_Data(UART_Data,0x10);
   UART_Send_Newline();
 }
+/**/
+void Mac_AppKey(sBuffer *UART_Buffer, unsigned char *UART_Data)
+{
+  unsigned char i, j;
+  byte datalen = 0x10;
+  int eepromstartaddr = 36;
 
+  //Check if it is a set command and there is enough data sent
+  if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 47)
+  {
+    for(i = 0,j=0; i < 16; i++,j++)
+    {
+      UART_Data[i] = ASCII2Hex(UART_Buffer->Data[(j*2)+15],UART_Buffer->Data[(j*2)+16]);
+    }
+     EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
+  }
+
+  //Send AppKey
+   EEPROMER(UART_Data, datalen, 'r', eepromstartaddr);
+  Serial.write("AppKey: ");
+  UART_Send_Data(UART_Data,0x10 );
+  UART_Send_Newline();
+
+}
+/**/
+/*
 void Mac_AppKey(sBuffer *UART_Buffer, unsigned char *AppKey)
 {
-  unsigned char i;
+  unsigned char i, j;
+  unsigned char startIndex = 20;
 
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 47)
@@ -197,54 +245,66 @@ void Mac_AppKey(sBuffer *UART_Buffer, unsigned char *AppKey)
     }
   }
 
+  Serial.println(sizeof(AppKey));
   //Send AppKey
   Serial.write("AppKey: ");
-  UART_Send_Data(AppKey,0x10);
+  UART_Send_Data(AppKey,0x10,startIndex);
   UART_Send_Newline();
 
 }
+/**/
 
-void Mac_AppEUI(sBuffer *UART_Buffer, unsigned char *AppEUI)
+void Mac_AppEUI(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
-  unsigned char i;
+  unsigned char i, j;
+  byte datalen = 0x08;
+  int eepromstartaddr = 52;
 
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 31)
   {
-    for(i = 0; i < 8; i++)
+    for(i = 0,j=0; i < 8; i++,j++)
     {
-      AppEUI[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+15],UART_Buffer->Data[(i*2)+16]);
+      UART_Data[i] = ASCII2Hex(UART_Buffer->Data[(j*2)+15],UART_Buffer->Data[(j*2)+16]);
     }
+     EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
   }
 
   //Send AppEUI
+   EEPROMER(UART_Data, datalen, 'r', eepromstartaddr);
   Serial.write("AppEUI: ");
-  UART_Send_Data(AppEUI,0x08);
+  UART_Send_Data(UART_Data,0x08 );
   UART_Send_Newline();
 }
 
-void Mac_DevEUI(sBuffer *UART_Buffer, unsigned char *DevEUI)
+void Mac_DevEUI(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
-  unsigned char i;
+  unsigned char i, j;
+  byte datalen = 0x08;
+  int eepromstartaddr = 60;
 
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 31)
   {
     for(i = 0; i < 8; i++)
     {
-      DevEUI[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+15],UART_Buffer->Data[(i*2)+16]);
+      UART_Data[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+15],UART_Buffer->Data[(i*2)+16]);
     }
+     EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
   }
 
   //Send DevEUI
+   EEPROMER(UART_Data, datalen, 'r', eepromstartaddr);
   Serial.write("DevEUI: ");
-  UART_Send_Data(DevEUI,0x08);
+  UART_Send_Data(UART_Data,0x08 );
   UART_Send_Newline();
 }
 
-void Mac_DrTx(sBuffer *UART_Buffer, unsigned char *Datarate)
+void Mac_DrTx(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
   unsigned char Datarate_Temp;
+  byte datalen = 0x01;
+  int eepromstartaddr = 61;
 
   //Check if it is a set command and ther is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 15)
@@ -255,18 +315,27 @@ void Mac_DrTx(sBuffer *UART_Buffer, unsigned char *Datarate)
     //Check if the value is oke
     if(Datarate_Temp <= 0x06)
     {
-      *Datarate = Datarate_Temp;
+     // *Datarate = Datarate_Temp;
+       UART_Data[0]= Datarate_Temp;
+        EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
     }
+    
   }
 
+   EEPROMER(UART_Data, datalen, 'r', eepromstartaddr);
   Serial.write("Datarate Tx: ");
 
-  UART_Send_Datarate(Datarate);
+  //unsigned char tmp = UART_Data[0];
+  UART_Send_Datarate(&UART_Data[0]);
+  //UART_Send_Data(UART_Data,0x01 );
+  //UART_Send_Newline();
 }
 
-void Mac_DrRx(sBuffer *UART_Buffer, unsigned char *Datarate)
+void Mac_DrRx(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
   unsigned char Datarate_Temp;
+  byte datalen = 0x01;
+  int eepromstartaddr = 62;
 
   //Check if it is a set command and ther is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 15)
@@ -277,18 +346,26 @@ void Mac_DrRx(sBuffer *UART_Buffer, unsigned char *Datarate)
     //Check if the value is oke
     if(Datarate_Temp <= 0x06)
     {
-      *Datarate = Datarate_Temp;
+      //*Datarate = Datarate_Temp;
+      UART_Data[0]= Datarate_Temp;
+       EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
     }
   }
 
+  EEPROMER(UART_Data, datalen,'r', eepromstartaddr);
   Serial.write("Datarate Rx: ");
 
-  UART_Send_Datarate(Datarate);
+  //UART_Send_Datarate(Datarate);
+  UART_Send_Datarate(&UART_Data[0]);
+  //UART_Send_Data(UART_Data,0x01 );
+  //UART_Send_Newline();
 }
 
-void Mac_ChTx(sBuffer *UART_Buffer, unsigned char *Channel)
+void Mac_ChTx(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
  unsigned char Channel_Temp;
+ byte datalen = 0x01;
+ int eepromstartaddr = 63;
 
   //Check if it is a set command and ther is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 15)
@@ -299,18 +376,24 @@ void Mac_ChTx(sBuffer *UART_Buffer, unsigned char *Channel)
     //Check if the value is oke
     if(Channel_Temp <= 0x07 || Channel_Temp == 0x10)
     {
-      *Channel = Channel_Temp;
+//      *Channel = Channel_Temp;
+      UART_Data[0]= Channel_Temp;
+      EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
     }
   }
+  EEPROMER(UART_Data, datalen, 'r', eepromstartaddr);
 
   Serial.write("Channel Tx: ");
 
-  UART_Send_Channel(Channel);
+  //UART_Send_Channel(Channel);
+   UART_Send_Datarate(&UART_Data[0]);
 }
 
-void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *Channel)
+void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
   unsigned char Channel_Temp;
+ byte datalen = 0x01;
+ int eepromstartaddr = 64;
 
   //Check if it is a set command and ther is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 15)
@@ -321,84 +404,97 @@ void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *Channel)
     //Check if the value is oke
     if(Channel_Temp <= 0x07 || Channel_Temp == 0x10)
     {
-      *Channel = Channel_Temp;
+      //*Channel = Channel_Temp;
+      UART_Data[0]= Channel_Temp;
+      EEPROMER(UART_Data, datalen, 'w', eepromstartaddr);
     }
   }
+  EEPROMER(UART_Data, datalen, 'r', eepromstartaddr);
 
   Serial.write("Channel Rx: ");
-
-  UART_Send_Channel(Channel);
+  //UART_Send_Channel(Channel);
+  UART_Send_Datarate(&UART_Data[0]);
 }
 
-void Mac_Power(sBuffer *UART_Buffer, unsigned char *Power)
+void Mac_Power(sBuffer *UART_Buffer, unsigned char *UART_Data)                                                                        //here
 {
 
+  int eepromstartaddr = 65;
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 17)
   {
+    Serial.println("Setting power");
     unsigned char RFM_Data;
 
-    *Power = ASCII2Hex(UART_Buffer->Data[15],UART_Buffer->Data[16]);
+    *UART_Data = ASCII2Hex(UART_Buffer->Data[15],UART_Buffer->Data[16]);
 
     //Check if power is not over 0x0F
-    if(*Power > 0x0F)
+    if(*UART_Data > 0x0F)
     {
-      *Power = 0x0F;
+      *UART_Data = 0x0F;
     }
-
+    EEPROMER(UART_Data, 0x01, 'w', eepromstartaddr);
     //Set all ther correct bits for the RFM register
-    RFM_Data = *Power + 0xF0;
-
+    RFM_Data = *UART_Data + 0xF0;
     //Write power to RFM module
-    RFM_Write(0x09,RFM_Data);
+    RFM_Write(0x09,RFM_Data); 
   }
 
   //Send answer
+  EEPROMER(UART_Data, 0x01, 'r', eepromstartaddr);
   Serial.write("Power: ");
-  UART_Send_Data(Power,0x01);
+  UART_Send_Data(UART_Data,0x01);
   UART_Send_Newline();
 }
 
-void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm)
+void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
+  int eepromstartaddr = 66;
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 14)
   {
-    *Confirm = ASCII2Hex(UART_Buffer->Data[12],UART_Buffer->Data[13]);
+    *UART_Data = ASCII2Hex(UART_Buffer->Data[12],UART_Buffer->Data[13]);
 
-    if(*Confirm >= 0x01)
+    if(*UART_Data >= 0x01)
     {
-      *Confirm = 0x01;
+      *UART_Data = 0x01;
     }
+    EEPROMER(UART_Data, 0x01, 'w', eepromstartaddr);
   }
 
   //Send answer
+  EEPROMER(UART_Data, 0x01, 'r', eepromstartaddr);
   Serial.write("Confirm: ");
-  UART_Send_Data(Confirm,0x01);
+  UART_Send_Data(UART_Data,0x01);
   UART_Send_Newline();
 }
 
-void Mac_Channel_Hopping(sBuffer *UART_Buffer, unsigned char *Channel_Hopping)
+void Mac_Channel_Hopping(sBuffer *UART_Buffer, unsigned char *UART_Data)
 {
+  int eepromstartaddr = 67;
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 16)
   {
-    *Channel_Hopping = ASCII2Hex(UART_Buffer->Data[14],UART_Buffer->Data[15]);
+    *UART_Data = ASCII2Hex(UART_Buffer->Data[14],UART_Buffer->Data[15]);
 
-    if(*Channel_Hopping >= 0x01)
+    if(*UART_Data >= 0x01)
     {
-      *Channel_Hopping = 0x01;
+      *UART_Data = 0x01;
     }
+    EEPROMER(UART_Data, 0x01, 'w', eepromstartaddr);
   }
 
   //Send answer
+  EEPROMER(UART_Data, 0x01, 'r', eepromstartaddr);
   Serial.write("Channel Hopping: ");
-  UART_Send_Data(Channel_Hopping,0x01);
+  UART_Send_Data(UART_Data,0x01);
   UART_Send_Newline();
 }
 
 void Mac_Class(sBuffer *UART_Buffer, sSettings *LoRa_Settings)
 {
+   int eepromstartaddr = 68;
+   unsigned char tmp[1];
   //Check if it is a set command and there is enough data sent
   if(UART_Buffer->Data[4] == 's' && UART_Buffer->Counter == 16)
   {
@@ -408,9 +504,14 @@ void Mac_Class(sBuffer *UART_Buffer, sSettings *LoRa_Settings)
     {
       LoRa_Settings->Mote_Class = 0x01;
     }
+     tmp[0] = LoRa_Settings->Mote_Class;
+    EEPROMER(tmp, 0x01, 'w', eepromstartaddr);
+    
   }
 
   //Send answer and switch rfm to standby or receive
+  tmp[0] = LoRa_Settings->Mote_Class;
+  EEPROMER(tmp, 0x01, 'r', eepromstartaddr);
   Serial.write("Mote Class: ");
   if(LoRa_Settings->Mote_Class == 0x00)
   {

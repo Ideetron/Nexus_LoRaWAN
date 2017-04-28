@@ -30,6 +30,7 @@
 #define COMMANDS_H
 
 #include "Struct.h"
+#include <EEPROM.h>
 
 /*
 *****************************************************************************************
@@ -54,6 +55,7 @@ void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm);
 void Mac_Channel_Hopping(sBuffer *UART_Buffer, unsigned char *Channel_Hopping);
 void Mac_Class(sBuffer *UART_Buffer, sSettings *LoRa_Settings);
 void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer);
+void EEPROMER(unsigned char *Data, unsigned char Length, char action, int eepromstartaddr);
 
 #endif
 
