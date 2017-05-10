@@ -41,8 +41,6 @@
 void UART_Send_Newline();
 void UART_Send_Data(unsigned char *Data, unsigned char Length);
 void Store_Config(sBuffer *UART_Buffer, unsigned char *UART_Data, byte datalen, int eepromstartaddr);
-void Mac_Channel_Hopping(sBuffer *UART_Buffer, unsigned char *Channel_Hopping);
-void Mac_Class(sBuffer *UART_Buffer, sSettings *LoRa_Settings);
 void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer);
 void EEPROMER(unsigned char *Data, unsigned char Length, char action, int eepromstartaddr);
 
