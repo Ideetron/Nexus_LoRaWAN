@@ -437,36 +437,6 @@ void loop()
            break;
           
       }
-     
-      //Check for commands
-      /*
-       * MAC command type
-       */
-       /*
-  
-        //Check for reset command
-        if(UART_Data[4] == 'r' && UART_Data[5] == 'e' && UART_Data[6] == 's' && UART_Data[7] == 'e' && UART_Data[8] == 't')
-        {
-
-        }
-        /*
-        //Check for a set or get command
-        if((UART_Data[4] == 's' || UART_Data[4] == 'g') && UART_Data[5] == 'e' && UART_Data[6] == 't')
-        {   
-
-          //mac set/get class
-          if(UART_Data[8] == 'c' && UART_Data[9] == 'l' && UART_Data[10] == 'a' && UART_Data[11] == 's' && UART_Data[12] == 's')
-          {
-            Mac_Class(&UART_Rx_Buffer, &LoRa_Settings);
-
-            //Reset RFM command
-            RFM_Command_Status = NO_RFM_COMMAND;
-          }
-
-        
-        }
-      }
-  /**/
       //Set UART status to data done to clear for next command
       UART_Status = UART_DATA_DONE;
     }
