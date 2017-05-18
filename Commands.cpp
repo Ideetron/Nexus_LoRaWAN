@@ -57,7 +57,6 @@ void UART_Send_Data(unsigned char *Data, unsigned char Length)
 
 void EEPROMER(unsigned char *Data, unsigned char Length, char action, int eepromstartaddr){
   int i;
-  
   switch(action)
   {
     case 'w':                                         
@@ -101,7 +100,7 @@ void UART_Send_Datarate(unsigned char *Datarate)
 }
 
 void UART_Send_Channel(unsigned char *Channel)
-{
+{/*
   switch(*Channel)
   {
     case 0x00:
@@ -134,7 +133,7 @@ void UART_Send_Channel(unsigned char *Channel)
     }
 
     UART_Send_Newline();
-
+*/
 }
 
 
@@ -143,21 +142,24 @@ void Store_Config(sBuffer *UART_Buffer, unsigned char *UART_Data, byte datalen, 
 
    byte i;
    byte tmp = UART_Data[0];
+   if(tmp == '0' || tmp == '1' )return;
+   if(UART_Data[1] == '1')eepromstartaddr += 69;// 0->TTN, 1-> KCS. 2 sets of credentials
+   
   //Check if it is a set command and there is enough data sent
-  if(UART_Buffer->Data[1] == 's' && UART_Buffer->Counter >= (datalen*2 + 3))
+  if(UART_Buffer->Data[2] == 's' && UART_Buffer->Counter >= (datalen*2 + 4))
   {
     for(i = 0; i < datalen; i++)
     {
-      UART_Data[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+3],UART_Buffer->Data[(i*2)+4]);
+      UART_Data[i] = ASCII2Hex(UART_Buffer->Data[(i*2)+4],UART_Buffer->Data[(i*2)+5]);
     }
     switch(tmp)
       {
-        case 'd':
+        case 'e':
           if(UART_Data[0] > 0x0F)UART_Data[0] = 0x0F;
           break;
-        case 'e':
         case 'f':
         case 'g':
+        case 'h':
           if(UART_Data[0] > 0x01)UART_Data[0] = 0x01;
           break;
       }    
@@ -168,7 +170,7 @@ void Store_Config(sBuffer *UART_Buffer, unsigned char *UART_Data, byte datalen, 
     EEPROMER(UART_Data, datalen,'r', eepromstartaddr);
 
    //power
-    if(tmp == 'd')
+    if(tmp == 'e')//power
     {
       unsigned char RFM_Data;
       RFM_Data = UART_Data[0] + 0xF0;

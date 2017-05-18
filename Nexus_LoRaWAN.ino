@@ -272,6 +272,8 @@ void loop()
     {
       byte datalen;
       int eepromaddr;
+      char tmp = UART_Data[0];
+      char whichdevice = UART_Data[1];
       switch(UART_Data[0])
       {
         case '0':
@@ -331,7 +333,7 @@ void loop()
           datalen = 0x08;
           eepromaddr = 60;
           break;
-         case '9':
+         /*case '9':
          //mac set/get drrx
           datalen = 0x01;
           eepromaddr = 61;
@@ -372,12 +374,53 @@ void loop()
           datalen = 0x01;
           eepromaddr = 68;
           break;
+         case 'h':
+         //mac set/get class
+          datalen = 0x01;
+          eepromaddr = 68;
+          break;
+         case 'i':
+         //mac set/get class
+          datalen = 0x01;
+          eepromaddr = 68;
+          break;
+         case 'j':
+         //mac set/get class
+          datalen = 0x01;
+          eepromaddr = 68;
+          break;
+         case 'k':
+         //mac set/get class
+          datalen = 0x01;
+          eepromaddr = 68;
+          break;
+         case 'l':
+         //mac set/get class
+          datalen = 0x01;
+          eepromaddr = 68;
+          break;
+          */
+         case 'a':
+         case 'b':
+         case 'c':
+         case 'd':
+         case 'e':
+         case 'f':
+         case 'g':
+         case 'h':
+         case 'i':
+         case 'j':
+         case 'k':
+         case 'l':
+         case 'm':
+          datalen = 0x01;
+          eepromaddr = 61 + (tmp - 'a');
+          break;
          case 'z':
           break;
           
           
       }
-      char tmp = UART_Data[0];
       Store_Config(&UART_Rx_Buffer, UART_Data, datalen, eepromaddr);
       switch(tmp)
       {
@@ -391,7 +434,6 @@ void loop()
           Frame_Counter_Tx = 0x0000;
           
       }
-      
       switch(tmp)
       {
         case '3':
@@ -400,24 +442,24 @@ void loop()
         case '6':
         case '7':
         case '8':
-        case '9':
         case 'a':
         case 'b':
         case 'c':
-        case 'e':
+        case 'd':
         case 'f':
         case 'g':
+        case 'h':
           RFM_Command_Status = NO_RFM_COMMAND;
           
       }
       switch(tmp)
       {
-        case 'd':
-          EEPROMER(UART_Data, 0x01,'r', 65);
+        case 'e':
+          EEPROMER(UART_Data, 0x01,'r', 65+(whichdevice=='0'?0:69));
           LoRa_Settings.Transmit_Power = UART_Data[0];
           break;
-        case 'g':
-          EEPROMER(UART_Data, 0x01,'r', 68);
+        case 'h':
+          EEPROMER(UART_Data, 0x01,'r', 68+(whichdevice=='0'?0:69));
           LoRa_Settings.Mote_Class = UART_Data[0];
           if(LoRa_Settings.Mote_Class == 0x00)
           {
