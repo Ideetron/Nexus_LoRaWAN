@@ -255,6 +255,7 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 	if(LoRa_Settings->Mote_Class == 0x00)
 	{
 		Message_Status = RFM_Single_Receive(LoRa_Settings);
+   
 	}
 	else
 	{

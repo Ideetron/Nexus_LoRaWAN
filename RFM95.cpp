@@ -144,13 +144,6 @@ void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings)
   //Clear interrupt
   RFM_Write(0x12,0x08);
 
-  //Change DIO 0 back to RxDone
-  RFM_Write(0x40,0x00);
-
-  //Invert IQ Back
-  RFM_Write(0x33,0x67);
-  RFM_Write(0x3B,0x19);
-
   //Switch RFM back to receive if it is a type C mote
   if(LoRa_Settings->Mote_Class == 0x01)
   {
@@ -173,15 +166,18 @@ message_t RFM_Single_Receive(sSettings *LoRa_Settings)
 {
   message_t Message_Status = NO_MESSAGE;
 
+  //Change DIO 0 back to RxDone
+  RFM_Write(0x40,0x00);
+
+  //Invert IQ Back
+  RFM_Write(0x33,0x67);
+  RFM_Write(0x3B,0x19);
+
   //Change Datarate
   RFM_Change_Datarate(LoRa_Settings->Datarate_Rx);
 
   //Change Channel
   RFM_Change_Channel(LoRa_Settings->Channel_Rx);
-
-  //Clear interrupt register
-  //To force the timeout pin low
-  RFM_Write(0x12,0xE0);
 
   //Switch RFM to Single reception
   RFM_Switch_Mode(0x06);
@@ -195,9 +191,14 @@ message_t RFM_Single_Receive(sSettings *LoRa_Settings)
   //Check for Timeout
   if(digitalRead(DIO1) == HIGH)
   {
+    //Clear interrupt register
+    RFM_Write(0x12,0xE0);
+    
+    
     Message_Status = TIMEOUT;
     Serial.write("Timeout");
 
+    UART_Send_Newline();
     UART_Send_Newline();
   }
 
@@ -220,6 +221,13 @@ message_t RFM_Single_Receive(sSettings *LoRa_Settings)
 */
 void RFM_Continuous_Receive(sSettings *LoRa_Settings)
 {
+  //Change DIO 0 back to RxDone
+  RFM_Write(0x40,0x00);
+
+  //Invert IQ Back
+  RFM_Write(0x33,0x67);
+  RFM_Write(0x3B,0x19);
+  
 	//Change Datarate
 	RFM_Change_Datarate(LoRa_Settings->Datarate_Rx);
 

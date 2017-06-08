@@ -511,6 +511,9 @@ void loop()
 		  UART_Send_Newline();
       UART_Send_Newline();
 
+      //Clear Buffer counter
+      Buffer_Rx.Counter = 0x00;
+
       Rx_Status = NO_RX;
     }
   }//While(1)
