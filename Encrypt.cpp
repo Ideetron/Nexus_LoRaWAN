@@ -51,7 +51,7 @@
 *				*Message pointer to sLoRa_Message struct containing the message specific variables
 *****************************************************************************************
 */
-void Encrypt_Payload(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message *Message)
+void Encrypt_Payload(sBuffer *Buffer, unsigned char *Key, sLoRa_Message *Message)
 {
 	unsigned char i = 0x00;
 	unsigned char j;
@@ -94,7 +94,7 @@ void Encrypt_Payload(sBuffer *Buffer, sLoRa_Session *Session_Data, sLoRa_Message
 		Block_A[15] = i + 1;
 
 		//Calculate S
-		AES_Encrypt(Block_A,Session_Data->AppSKey);
+		AES_Encrypt(Block_A,Key);
 
 		//Check for last block
 		if(i != (Number_of_Blocks - 1))

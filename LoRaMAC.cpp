@@ -168,7 +168,7 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
     RFM_Package.Counter++;
 
     //Encrypt the data
-    Encrypt_Payload(Data_Tx, Session_Data, &Message);
+    Encrypt_Payload(Data_Tx, Session_Data->AppSKey, &Message);
 
     //Load Data
     for(i = 0; i < Data_Tx->Counter; i++)
@@ -562,7 +562,15 @@ void LORA_Receive_Data(sBuffer *Data_Rx, sLoRa_Session *Session_Data, sLoRa_OTAA
 						Data_Rx->Data[i] = RFM_Data[Data_Location + i];
 					}
 
-					Encrypt_Payload(Data_Rx, Session_Data, Message);
+         //Check frame port fiels. When zero it is a mac command message encrypted with NwkSKey
+         if(Message->Frame_Port == 0x00)
+         {
+          Encrypt_Payload(Data_Rx, Session_Data->NwkSKey, Message);
+         }
+         else
+         {
+          Encrypt_Payload(Data_Rx, Session_Data->AppSKey, Message);
+         }
 
 					Message_Status = MESSAGE_DONE;
 				}

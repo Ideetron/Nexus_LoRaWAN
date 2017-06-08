@@ -461,6 +461,11 @@ void loop()
       //LoRa cycle
       LORA_Cycle(&Buffer_Tx, &Buffer_Rx, &RFM_Command_Status, &Session_Data, &OTAA_Data, &Message_Rx, &LoRa_Settings);
 
+      if(Buffer_Rx.Counter != 0x00)
+      {
+        Rx_Status = NEW_RX;
+      }
+      
       RFM_Command_Status = NO_RFM_COMMAND;
     }
 
@@ -491,27 +496,22 @@ void loop()
         //Get data
         LORA_Receive_Data(&Buffer_Rx, &Session_Data, &OTAA_Data, &Message_Rx, &LoRa_Settings);
 
-        Rx_Status = NEW_RX;
+        if(Buffer_Rx.Counter != 0x00)
+        {
+          Rx_Status = NEW_RX;
+        }        
       }
     }
 
     //If there is new data
     if(Rx_Status == NEW_RX)
     {
-		//Check if there is data in the received message
-      	if(Buffer_Rx.Counter != 0x00)
-		{
-			UART_Send_Data(Buffer_Rx.Data,Buffer_Rx.Counter);
-		}
-      	else
-      	{
-      	  Serial.write("No data");
-      	}
+      UART_Send_Data(Buffer_Rx.Data,Buffer_Rx.Counter);
+		  
+		  UART_Send_Newline();
+      UART_Send_Newline();
 
-      	UART_Send_Newline();
-      	UART_Send_Newline();
-
-      	Rx_Status = NO_RX;
+      Rx_Status = NO_RX;
     }
   }//While(1)
 }
