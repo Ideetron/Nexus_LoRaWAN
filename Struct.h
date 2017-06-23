@@ -59,6 +59,7 @@ typedef struct {
     unsigned char *NetID;
 } sLoRa_OTAA;
 
+
 //Struct to store information of a LoRaWAN message to transmit or received
 typedef struct{
     unsigned char MAC_Header;
@@ -84,6 +85,16 @@ typedef struct {
 } sSettings;
 
 
+typedef struct{
+  //modulation
+  //bandwidth
+  //spreading factor
+  unsigned char *NwkSKey;
+  unsigned char *AppSKey;
+  unsigned char *DevAddr;
+  unsigned int  *Frame_Counter;
+  
+}VipimoSettings;
 
 #endif
 

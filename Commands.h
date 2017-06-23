@@ -30,6 +30,7 @@
 #define COMMANDS_H
 
 #include "Struct.h"
+#include <EEPROM.h>
 
 /*
 *****************************************************************************************
@@ -39,21 +40,9 @@
 
 void UART_Send_Newline();
 void UART_Send_Data(unsigned char *Data, unsigned char Length);
-void Mac_DevAddr(sBuffer *UART_Buffer, unsigned char *DevAddr);
-void Mac_NwkSKey(sBuffer *UART_Buffer, unsigned char *NwkSKey);
-void Mac_AppSKey(sBuffer *UART_Buffer, unsigned char *AppSKey);
-void Mac_AppKey(sBuffer *UART_Buffer, unsigned char *AppKey);
-void Mac_AppEUI(sBuffer *UART_Buffer, unsigned char *AppEUI);
-void Mac_DevEUI(sBuffer *UART_Buffer, unsigned char *DevEUI);
-void Mac_DrTx(sBuffer *UART_Buffer, unsigned char *Datarate);
-void Mac_DrRx(sBuffer *UART_Buffer, unsigned char *Datarate);
-void Mac_ChTx(sBuffer *UART_Buffer, unsigned char *Channel);
-void Mac_ChRx(sBuffer *UART_Buffer, unsigned char *Channel);
-void Mac_Power(sBuffer *UART_Buffer, unsigned char *Power);
-void Mac_Confirm(sBuffer *UART_Buffer, unsigned char *Confirm);
-void Mac_Channel_Hopping(sBuffer *UART_Buffer, unsigned char *Channel_Hopping);
-void Mac_Class(sBuffer *UART_Buffer, sSettings *LoRa_Settings);
+void Store_Config(sBuffer *UART_Buffer, unsigned char *UART_Data, byte datalen, int eepromstartaddr);
 void Mac_Data(sBuffer *UART_Buffer, sBuffer *RFM_Buffer);
+void EEPROMER(unsigned char *Data, unsigned char Length, char action, int eepromstartaddr);
 
 #endif
 
