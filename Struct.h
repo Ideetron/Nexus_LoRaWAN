@@ -85,16 +85,6 @@ typedef struct {
 } sSettings;
 
 
-typedef struct{
-  //modulation
-  //bandwidth
-  //spreading factor
-  unsigned char *NwkSKey;
-  unsigned char *AppSKey;
-  unsigned char *DevAddr;
-  unsigned int  *Frame_Counter;
-  
-}VipimoSettings;
 
 #endif
 

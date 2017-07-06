@@ -128,8 +128,11 @@ void RFM_Send_Package(sBuffer *RFM_Tx_Package, sSettings *LoRa_Settings)
   RFM_Write(0x0D,RFM_Tx_Location);
 
   //Write Payload to FiFo
+  //Serial.println(RFM_Tx_Package->Counter);
+  //Serial.print("Addr: ");UART_Send_Data(RFM_Tx_Package->Data, 42);UART_Send_Newline();
   for (i = 0;i < RFM_Tx_Package->Counter; i++)
   {
+    //UART_Send_Data(RFM_Tx_Package->Data, i);UART_Send_Newline();
     RFM_Write(0x00, RFM_Tx_Package->Data[i]);
   }
 

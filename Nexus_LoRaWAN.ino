@@ -69,6 +69,9 @@
 
 #include <EEPROM.h>
 
+
+long initmillis = 0;//
+byte configcycle = 0;
 /*
 *****************************************************************************************
 * GLOBAL VARIABLES
@@ -83,6 +86,76 @@ unsigned char AppSkey[16] = {
   0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
   0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
 };
+
+void configuration();
+uart_t        UART_Status         = NO_UART_DATA;
+RFM_command_t RFM_Command_Status  = NO_RFM_COMMAND;
+rx_t          Rx_Status           = NO_RX;
+
+//Initialise session data struct
+  unsigned char NwkSKey[16] = {
+      0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
+      0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
+  };
+  unsigned char AppSKey[16] = {
+      0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
+      0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
+  };
+  unsigned int Frame_Counter_Tx = 0x0000;
+  unsigned char Address_Tx[4] = {0x00, 0x00, 0x00, 0x00};
+  //EEPROMER(Address_Tx, 4, 'r', 0);
+  
+  
+  sLoRa_Session Session_Data = {NwkSKey, AppSKey, Address_Tx, &Frame_Counter_Tx};
+
+  //Initialize OTAA data struct
+  unsigned char DevEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  
+  unsigned char AppEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  
+  unsigned char AppKey[16] = {
+      0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
+      0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
+  };
+ 
+  unsigned char DevNonce[2] = {0x00, 0x00};
+  unsigned char AppNonce[3] = {0x00, 0x00, 0x00};
+  unsigned char NetID[3] = {0x00, 0x00, 0x00};
+
+  sLoRa_OTAA OTAA_Data = {DevEUI, AppEUI, AppKey, DevNonce, AppNonce, NetID};
+
+  //Initialise LoRA settings struct
+  
+  unsigned char Datarate_Tx = 0x00; //set to SF12 BW 125 kHz
+  unsigned char Datarate_Rx = 0x03; //set to SF9 BW 125 kHz
+  unsigned char Channel_Tx = 0x00; //set to 868.100 MHz
+  unsigned char Channel_Rx = 0x10; //set tot 869.525 MHz
+
+  sSettings LoRa_Settings;
+
+  //Initialise buffer for data to transmit
+  unsigned char Data_Tx[64];
+  sBuffer Buffer_Tx = {Data_Tx, 0x00};
+
+  //Initialise buffer for data to receive
+  unsigned char Data_Rx[64];
+  sBuffer Buffer_Rx = {Data_Rx, 0x00};
+
+  //Initialise UART receive buffer
+  unsigned int UART_Timer = 0;
+  unsigned char UART_Data[111];
+  sBuffer UART_Rx_Buffer = { UART_Data, 0x00 };
+
+  //Initialise Receive message
+  sLoRa_Message Message_Rx;
+
+
+  byte count_enable = false;
+  byte Tx_done = true;
+
+  #include "config.h"
+#include "loader.h"
+  
 
 void setup()
 {
@@ -112,115 +185,47 @@ void setup()
   //Wait until RFM module is started
   WaitLoop(20);
       /**/
-}
 
-void loop()
-{
-  Serial.println("Staring Loop...");
-  unsigned char i;
+   #ifdef POWERMAN
+    powermanSetup();
+  #endif
+  #ifdef doorSensor
+    doorSensorSetup();
+  #endif
+  #ifdef PULSECOUNTER
+    pulseCounterSetup();
+  #endif
+  #ifdef RTC
+    RTCsetup();
+  #endif
+  #ifdef LIGHTSENSORS
+    lightSetup();
+  #endif
 
-  uart_t        UART_Status         = NO_UART_DATA;
-  RFM_command_t RFM_Command_Status  = NO_RFM_COMMAND;
-  rx_t          Rx_Status           = NO_RX;
-
-  //Initialise session data struct
-  unsigned char NwkSKey[16] = {
-      0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
-      0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
-  };
-  EEPROMER(NwkSKey, 16, 'r', 4);
-
-  unsigned char AppSKey[16] = {
-      0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
-      0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
-  };
-  EEPROMER(AppSKey, 16, 'r', 20);
-  
-  unsigned int Frame_Counter_Tx = 0x0000;
-  unsigned char Address_Tx[4] = {0x00, 0x00, 0x00, 0x00};
-  EEPROMER(Address_Tx, 4, 'r', 0);
-
-  sLoRa_Session Session_Data = {NwkSKey, AppSKey, Address_Tx, &Frame_Counter_Tx};
-
-  //Initialize OTAA data struct
-  unsigned char DevEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-  EEPROMER(DevEUI, 8, 'r', 60);
-  unsigned char AppEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-  EEPROMER(AppEUI, 8, 'r',52);
-  unsigned char AppKey[16] = {
-      0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
-      0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C
-  };
-  EEPROMER(AppKey, 16, 'r',36);
-  unsigned char DevNonce[2] = {0x00, 0x00};
-  unsigned char AppNonce[3] = {0x00, 0x00, 0x00};
-  unsigned char NetID[3] = {0x00, 0x00, 0x00};
-
-  sLoRa_OTAA OTAA_Data = {DevEUI, AppEUI, AppKey, DevNonce, AppNonce, NetID};
-
-  //Initialise LoRA settings struct
-  unsigned char Datarate_Tx = 0x00; //set to SF12 BW 125 kHz
-  unsigned char Datarate_Rx = 0x03; //set to SF9 BW 125 kHz
-  unsigned char Channel_Tx = 0x00; //set to 868.100 MHz
-  unsigned char Channel_Rx = 0x10; //set tot 869.525 MHz
-
-  sSettings LoRa_Settings;
-
-  LoRa_Settings.Mote_Class = 0x00; //0x00 is type A, 0x01 is type C
-
-  LoRa_Settings.Datarate_Rx = 0x03;
-  LoRa_Settings.Channel_Rx = 0x10;
-  LoRa_Settings.Datarate_Tx = 0x00;
-  LoRa_Settings.Channel_Tx = 0x00;
-
-  LoRa_Settings.Confirm = 0x00; //0x00 unconfirmed, 0x01 confirmed
-  LoRa_Settings.Channel_Hopping = 0x00; //0x00 no channel hopping, 0x01 channel hopping
-
-  //Initialise buffer for data to transmit
-  unsigned char Data_Tx[64];
-  sBuffer Buffer_Tx = {Data_Tx, 0x00};
-
-  //Initialise buffer for data to receive
-  unsigned char Data_Rx[64];
-  sBuffer Buffer_Rx = {Data_Rx, 0x00};
-
-  //Initialise UART receive buffer
-  unsigned int UART_Timer = 0;
-  unsigned char UART_Data[111];
-  sBuffer UART_Rx_Buffer = { UART_Data, 0x00 };
-
-  //Initialise Receive message
-  sLoRa_Message Message_Rx;
-
+  readsettings();
   Message_Rx.Direction = 0x01; //Set down direction for Rx message
 
   //Initialise DS2401 bytes
-  unsigned char DS_Bytes[8];
-  unsigned char DS_Status = 0x00;
+  //unsigned char DS_Bytes[8];
+  //unsigned char DS_Status = 0x00;
 
-  //Get unique ID from the DS2401 and check the CRC
-  /*
-  while(DS_Status == 0x00)
-  {
-    DS_Read(DS_Bytes);
-
-    DS_Status = DS_CheckCRC(DS_Bytes);
-
-    WaitLoop(10);
-  }
-
-  //Load First 4 bytes in Device ID
-  Address_Tx[0] = DS_Bytes[4];
-  Address_Tx[1] = DS_Bytes[3];
-  Address_Tx[2] = DS_Bytes[2];
-  Address_Tx[3] = DS_Bytes[1];
-  */
+  //
   //Initialize RFM module
   RFM_Init();
+  
+  initmillis = millis();
+  //give time(3 secs) for configuration to be read and written. Values chosen empirically
+  while(millis() - initmillis < 3000)configuration();
+  //if device is paused for configuration
+  while(configcycle == true)configuration();
+  transmitdata();// transmit data after atleast 3 secs
+  count_enable = true;      //enable interrupts at this point. Using this because cli() sei() are still failing.
+  
+}
 
-  while(1)
-  {
-    //Raise timers on the hearthbeat of 1 ms
+void configuration()
+{
+  //Raise timers on the hearthbeat of 1 ms
     //Check for compare flag of timer 2
     if((TIFR2 & 0x02) == 0x02)
     {
@@ -274,6 +279,13 @@ void loop()
       int eepromaddr;
       char tmp = UART_Data[0];
       char whichdevice = UART_Data[1];
+      /*
+       * UART_Data[0]
+       * 0: mac join
+       * 1: Mac data
+       * 2: reset
+       * 3: mac set/get devaddr
+       */
       switch(UART_Data[0])
       {
         case '0':
@@ -407,17 +419,21 @@ void loop()
          case 'e':
          case 'f':
          case 'g':
-         case 'h':
+         case 'h'://68
          case 'i':
-         case 'j':
-         case 'k':
-         case 'l':
-         case 'm':
+         //case 'j':
+         //case 'k':
+         //case 'l':
+         //case 'm':
           datalen = 0x01;
           eepromaddr = 61 + (tmp - 'a');
           break;
-         case 'z':
+         case 'j'://transmit interval
+         case 'k'://firmware version
+          datalen = 0x04;
+          eepromaddr = 61 + (tmp - 'a');
           break;
+         
           
           
       }
@@ -477,6 +493,20 @@ void loop()
           }
           UART_Send_Newline();
            break;
+          //
+         case 'z':
+          Serial.println("configuring");
+          if(UART_Data[4] == '0')
+          {
+            configcycle = false;
+            Serial.println("CCOFF");//config cycle on
+          }
+          else 
+          {
+            configcycle = true;
+            Serial.println("CCON");//config cycle off
+          }
+          break;
           
       }
       //Set UART status to data done to clear for next command
@@ -501,65 +531,43 @@ void loop()
         UART_Data[0] = Serial.read();
       }
     }
+}
 
-    //Type A mote transmit receive cycle
-    if((RFM_Command_Status == NEW_RFM_COMMAND || RFM_Command_Status == JOIN) && LoRa_Settings.Mote_Class == 0x00)
-    {
-      //LoRa cycle
-      LORA_Cycle(&Buffer_Tx, &Buffer_Rx, &RFM_Command_Status, &Session_Data, &OTAA_Data, &Message_Rx, &LoRa_Settings);
+void readsettings()
+{
+  //read from EEPROM
+  //LoRa_Settings.Mote_Class = 0x00; //0x00 is type A, 0x01 is type C
+  EEPROMER(&LoRa_Settings.Mote_Class, 0x01, 'r', 68);
+ // LoRa_Settings.Datarate_Rx = 0x03;
+  EEPROMER( &LoRa_Settings.Datarate_Rx, 0x01, 'r', 62);
+ // LoRa_Settings.Channel_Rx = 0x10;
+  EEPROMER( &LoRa_Settings.Channel_Rx, 0x01, 'r', 64);
+  //LoRa_Settings.Datarate_Tx = 0x00;
+  EEPROMER( &LoRa_Settings.Datarate_Tx, 0x01, 'r', 61);
+ // LoRa_Settings.Channel_Tx = 0x00;
+  EEPROMER( &LoRa_Settings.Channel_Tx, 0x01, 'r', 63);
 
-      RFM_Command_Status = NO_RFM_COMMAND;
-    }
+  //LoRa_Settings.Confirm = 0x00; //0x00 unconfirmed, 0x01 confirmed
+  EEPROMER( &LoRa_Settings.Confirm, 0x01, 'r', 66);
+ // LoRa_Settings.Channel_Hopping = 0x00; //0x00 no channel hopping, 0x01 channel hopping
+  EEPROMER( &LoRa_Settings.Channel_Tx, 0x01, 'r', 67); 
+}
 
-    //Type C mote transmit and receive handling
-    if(LoRa_Settings.Mote_Class == 0x01)
-    {
-      if(RFM_Command_Status == JOIN)
-      {
-        //Start join precedure
-        LoRa_Send_JoinReq(&OTAA_Data, &LoRa_Settings);
 
-        //Clear RFM_Command
-        RFM_Command_Status = NO_RFM_COMMAND;
-      }
 
-      //Transmit
-      if(RFM_Command_Status == NEW_RFM_COMMAND)
-      {
-        //Lora send data
-        LORA_Send_Data(&Buffer_Tx, &Session_Data, &LoRa_Settings);
 
-        RFM_Command_Status = NO_RFM_COMMAND;
-      }
 
-      //Receive
-      if(digitalRead(DIO0) == HIGH)
-      {
-        //Get data
-        LORA_Receive_Data(&Buffer_Rx, &Session_Data, &OTAA_Data, &Message_Rx, &LoRa_Settings);
-
-        Rx_Status = NEW_RX;
-      }
-    }
-
-    //If there is new data
-    if(Rx_Status == NEW_RX)
-    {
-		//Check if there is data in the received message
-      	if(Buffer_Rx.Counter != 0x00)
-		{
-			UART_Send_Data(Buffer_Rx.Data,Buffer_Rx.Counter);
-		}
-      	else
-      	{
-      	  Serial.write("No data");
-      	}
-
-      	UART_Send_Newline();
-      	UART_Send_Newline();
-
-      	Rx_Status = NO_RX;
-    }
-  }//While(1)
+void loop()
+{
+ //go to sleep
+ #ifndef TESTING
+  powerthisDownNow();
+ #endif
+ #ifdef TESTING
+  Serial.println("in ere..");
+  Serial.println(Tx_done);
+  delay(10000);
+  transmitdata();
+ #endif
 }
 

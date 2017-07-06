@@ -119,11 +119,18 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
   Message.DevAddr[2] = Session_Data->DevAddr[2];
   Message.DevAddr[3] = Session_Data->DevAddr[3];
 
+
+  
+ // Serial.print("Frame: ");UART_Send_Data(*Session_Data->Frame_Counter, 2);UART_Send_Newline();
+
+ unsigned int tmp = *Session_Data->Frame_Counter;
+ // Serial.print("Frame1:");Serial.println(tmp);
+
   //Set up direction
   Message.Direction = 0x00;
 
   //Load the frame counter from the session data into the message
-  Message.Frame_Counter = *Session_Data->Frame_Counter;
+  Message.Frame_Counter = tmp;//*Session_Data->Frame_Counter;
 
   //Set confirmation
   //Unconfirmed
@@ -151,8 +158,8 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
   RFM_Data[5] = Message.Frame_Control;
 
   //Load frame counter
-  RFM_Data[6] = (*Session_Data->Frame_Counter & 0x00FF);
-  RFM_Data[7] = ((*Session_Data->Frame_Counter >> 8) & 0x00FF);
+  RFM_Data[6] = (tmp & 0x00FF);//(*Session_Data->Frame_Counter & 0x00FF);
+  RFM_Data[7] = ((tmp >> 8) & 0x00FF);//((*Session_Data->Frame_Counter >> 8) & 0x00FF);
 
   //Set data counter to 8
   RFM_Package.Counter = 8;
@@ -191,12 +198,16 @@ void LORA_Send_Data(sBuffer *Data_Tx, sLoRa_Session *Session_Data, sSettings *Lo
 
   //Add MIC length to RFM package length
   RFM_Package.Counter = RFM_Package.Counter + 4;
-
+ // Serial.print("Frame: ");UART_Send_Data(RFM_Data, RFM_Package.Counter+i);UART_Send_Newline();
   //Send Package
   RFM_Send_Package(&RFM_Package, LoRa_Settings);
 
+  //UART_Send_Data(*Session_Data->Frame_Counter, 2);
+
+  
+
   //Raise Frame counter
-  if(*Session_Data->Frame_Counter != 0xFFFF)
+   if(*Session_Data->Frame_Counter != 0xFFFF)
   {
     //Raise frame counter
     *Session_Data->Frame_Counter = *Session_Data->Frame_Counter + 1;
